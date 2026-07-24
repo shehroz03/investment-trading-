@@ -1,11 +1,10 @@
-const admin = require("./_lib/admin");
+const { admin } = require("./_lib/admin");
 const { withHandler, requireUid, HttpError } = require("./_lib/http");
-
-const db = admin.firestore();
-const { FieldValue } = admin.firestore;
 
 module.exports = withHandler(async (req, body) => {
   const uid = await requireUid(req);
+  const db = admin.firestore();
+  const { FieldValue } = admin.firestore;
 
   const callerSnap = await db.collection("users").doc(uid).get();
   if (callerSnap.data()?.role !== "admin") throw new HttpError(403, "Admin only.");

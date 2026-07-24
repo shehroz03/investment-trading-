@@ -1,4 +1,4 @@
-const admin = require("./admin");
+const { admin, ensureInitialized } = require("./admin");
 
 // Bearer-token auth (not cookie-based), so an open CORS policy here doesn't
 // grant anything a valid Firebase ID token wouldn't already allow.
@@ -16,6 +16,7 @@ class HttpError extends Error {
 }
 
 async function requireUid(req) {
+  ensureInitialized();
   const header = req.headers.authorization || "";
   const match = header.match(/^Bearer (.+)$/);
   if (!match) throw new HttpError(401, "Sign in required.");
@@ -28,6 +29,9 @@ async function requireUid(req) {
 }
 
 // Wraps a POST-only handler with CORS, preflight, and uniform error responses.
+// CORS headers are set unconditionally before anything that could throw (including
+// Firebase admin init), so a misconfigured server still returns a readable JSON
+// error instead of a bare crash the browser reports as a CORS failure.
 function withHandler(handler) {
   return async (req, res) => {
     setCors(res);
@@ -40,6 +44,7 @@ function withHandler(handler) {
       return;
     }
     try {
+      ensureInitialized();
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
       const result = await handler(req, body);
       res.status(200).json(result);

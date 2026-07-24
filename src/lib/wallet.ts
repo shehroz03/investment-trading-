@@ -7,12 +7,59 @@ import {
   runTransaction,
   serverTimestamp,
   writeBatch,
+  type DocumentReference,
+  type Transaction,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getAppConfig } from "@/lib/config";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 
-export type DepositPurpose = "wallet" | "investment";
+export type DepositPurpose = "wallet" | "investment" | "order";
+
+// Every code path that can raise a wallet's `available` balance (deposit approval, admin
+// "Add Money", admin "Total Money" override) must set the new value through this helper —
+// it's the only place that checks an admin-set unlockTarget and sweeps Locked into Pending
+// Order Balance when the new available balance reaches it. Call it from inside an already-open
+// transaction so the credit and the unlock sweep stay atomic with whatever else that write does.
+// `unlockTargetOverride` lets a caller check against a target that isn't in `walletData` yet —
+// e.g. setUnlockTarget uses it to unlock immediately if the wallet already qualifies the
+// moment a new target is set, instead of only checking on the next balance credit.
+export function creditAvailableInTransaction(
+  tx: Transaction,
+  uid: string,
+  walletRef: DocumentReference,
+  walletData: Record<string, unknown>,
+  newAvailable: number,
+  extraWalletFields: Record<string, unknown> = {},
+  unlockTargetOverride?: number | null
+): { unlockedAmount: number } {
+  const currentLocked = (walletData.locked as number) ?? 0;
+  const unlockTarget =
+    unlockTargetOverride !== undefined ? unlockTargetOverride : ((walletData.unlockTarget as number | null) ?? null);
+  const shouldUnlock = unlockTarget != null && currentLocked > 0 && newAvailable >= unlockTarget;
+
+  const walletUpdate: Record<string, unknown> = { ...extraWalletFields, available: newAvailable };
+  if (shouldUnlock) {
+    walletUpdate.locked = 0;
+    walletUpdate.pendingOrder = increment(currentLocked);
+    walletUpdate.unlockTarget = null;
+  } else if (unlockTargetOverride !== undefined) {
+    walletUpdate.unlockTarget = unlockTargetOverride;
+  }
+  tx.update(walletRef, walletUpdate);
+
+  if (shouldUnlock) {
+    tx.set(doc(collection(db, "transactions")), {
+      uid,
+      type: "balance_unlock",
+      amount: currentLocked,
+      note: "Balance unlocked — moved to Pending Order Balance",
+      createdAt: serverTimestamp(),
+    });
+  }
+
+  return { unlockedAmount: shouldUnlock ? currentLocked : 0 };
+}
 
 interface CreateDepositParams {
   uid: string;
@@ -89,7 +136,31 @@ export async function approveDeposit(depositId: string, reviewedBy: string) {
     plan: string | null;
   };
 
-  const config = await getAppConfig();
+  const walletRef = doc(db, "wallets", deposit.uid);
+
+  if (deposit.purpose === "wallet") {
+    // Reads the wallet so a top-up that pushes `available` past an admin-set unlockTarget
+    // can also sweep locked -> pendingOrder in the same transaction.
+    await runTransaction(db, async (tx) => {
+      const walletSnap = await tx.get(walletRef);
+      const walletData = walletSnap.data() ?? {};
+      const currentAvailable = (walletData.available as number) ?? 0;
+
+      creditAvailableInTransaction(tx, deposit.uid, walletRef, walletData, currentAvailable + deposit.amount, {
+        totalDeposits: increment(deposit.amount),
+      });
+      tx.update(depositRef, { status: "approved", reviewedAt: serverTimestamp(), reviewedBy });
+      tx.set(doc(collection(db, "transactions")), {
+        uid: deposit.uid,
+        type: "deposit",
+        amount: deposit.amount,
+        note: "Wallet deposit",
+        createdAt: serverTimestamp(),
+      });
+    });
+    return;
+  }
+
   const batch = writeBatch(db);
 
   batch.update(depositRef, {
@@ -98,9 +169,8 @@ export async function approveDeposit(depositId: string, reviewedBy: string) {
     reviewedBy,
   });
 
-  const walletRef = doc(db, "wallets", deposit.uid);
-
   if (deposit.purpose === "investment") {
+    const config = await getAppConfig();
     batch.update(walletRef, {
       totalDeposits: increment(deposit.amount),
     });
@@ -115,8 +185,9 @@ export async function approveDeposit(depositId: string, reviewedBy: string) {
       startDate: serverTimestamp(),
     });
   } else {
+    // purpose === "order"
     batch.update(walletRef, {
-      available: increment(deposit.amount),
+      pendingOrder: increment(deposit.amount),
       totalDeposits: increment(deposit.amount),
     });
   }
@@ -125,7 +196,7 @@ export async function approveDeposit(depositId: string, reviewedBy: string) {
     uid: deposit.uid,
     type: "deposit",
     amount: deposit.amount,
-    note: deposit.purpose === "investment" ? `Investment (${deposit.plan})` : "Wallet deposit",
+    note: deposit.purpose === "investment" ? `Investment (${deposit.plan})` : "Order balance funding",
     createdAt: serverTimestamp(),
   });
 

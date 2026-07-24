@@ -74,7 +74,7 @@ export default function Settings() {
         <div className="grid grid-cols-2 gap-4 max-w-md mb-5">
           <div>
             <p className={`text-xs mb-1 ${textMuted}`}>Credit Score</p>
-            <p className={`text-2xl font-bold ${textPrimary}`}>{profile.creditScore ?? 0}</p>
+            <p className={`text-2xl font-bold ${textPrimary}`}>{profile.creditScore ? `${profile.creditScore}/100` : "—"}</p>
           </div>
           <div>
             <p className={`text-xs mb-1 ${textMuted}`}>Profile Completion</p>

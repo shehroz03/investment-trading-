@@ -65,6 +65,13 @@ export async function setTradeOutcome(tradeId: string, outcome: TradeOutcome) {
   return callTradingApi<{ ok: boolean }>("setTradeOutcome", { tradeId, outcome });
 }
 
+// No cron in this project — call this whenever the wallet page loads so any elapsed days of
+// 1% compounding interest on Locked Balance get credited. The wallet's onSnapshot listener in
+// AuthContext picks up the resulting change live, so callers don't need the return value.
+export async function accrueLockedInterest() {
+  return callTradingApi<{ ok: boolean }>("accrueInterest", {});
+}
+
 export async function getOpenTrades(uid: string): Promise<Trade[]> {
   const snap = await getDocs(
     query(collection(db, "trades"), where("uid", "==", uid), where("status", "==", "open"))

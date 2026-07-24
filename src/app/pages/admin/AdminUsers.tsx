@@ -1,26 +1,44 @@
 import { useEffect, useState } from "react";
-import { Users, ShieldCheck, Shield, Save } from "lucide-react";
+import { Users, ShieldCheck, Shield, Save, Wallet } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
-import { getAllUsers, setUserRole, setUserProfileStats } from "@/lib/admin";
+import {
+  getAllUsers,
+  setUserRole,
+  setUserProfileStats,
+  getAllWallets,
+  setUserWalletBalance,
+  setUnlockTarget,
+  setUserPendingOrderBalance,
+  setUserLockedBalance,
+  type WalletSummary,
+} from "@/lib/admin";
+import { AddMoneyModal } from "@/app/components/AddMoneyModal";
 import type { UserProfile } from "@/app/context/AuthContext";
 
 interface StatsEdit {
   creditScore: number;
   profileCompletionPercent: number;
+  balance: number;
+  pendingOrderBalance: number;
+  lockedBalance: number;
+  // 0 means "no unlock target set" — matches the plain-number input pattern used elsewhere in this table.
+  unlockTarget: number;
 }
 
 export default function AdminUsers() {
   const { user: currentUser } = useAuth();
   const { textPrimary, textMuted, divider, theadBg, inputBg, hoverBg } = useThemeClasses();
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [wallets, setWallets] = useState<Record<string, WalletSummary>>({});
   const [search, setSearch] = useState("");
   const [busyUid, setBusyUid] = useState<string | null>(null);
   const [statsEdits, setStatsEdits] = useState<Record<string, StatsEdit>>({});
   const [savingStatsUid, setSavingStatsUid] = useState<string | null>(null);
+  const [addMoneyTarget, setAddMoneyTarget] = useState<UserProfile | null>(null);
 
-  const load = () => getAllUsers().then(setUsers);
+  const load = () => Promise.all([getAllUsers().then(setUsers), getAllWallets().then(setWallets)]);
 
   useEffect(() => {
     load();
@@ -37,16 +55,49 @@ export default function AdminUsers() {
   };
 
   const getStats = (u: UserProfile): StatsEdit =>
-    statsEdits[u.uid] ?? { creditScore: u.creditScore ?? 0, profileCompletionPercent: u.profileCompletionPercent ?? 0 };
+    statsEdits[u.uid] ?? {
+      creditScore: u.creditScore ?? 0,
+      profileCompletionPercent: u.profileCompletionPercent ?? 0,
+      balance: wallets[u.uid]?.available ?? 0,
+      pendingOrderBalance: wallets[u.uid]?.pendingOrder ?? 0,
+      lockedBalance: wallets[u.uid]?.locked ?? 0,
+      unlockTarget: wallets[u.uid]?.unlockTarget ?? 0,
+    };
 
   const updateStatsEdit = (u: UserProfile, field: keyof StatsEdit, value: number) => {
     setStatsEdits((prev) => ({ ...prev, [u.uid]: { ...getStats(u), [field]: value } }));
   };
 
+  const clampStats = (stats: StatsEdit): StatsEdit => ({
+    creditScore: Math.min(100, Math.max(1, Math.round(stats.creditScore))),
+    profileCompletionPercent: Math.min(100, Math.max(0, Math.round(stats.profileCompletionPercent))),
+    balance: Math.max(0, stats.balance),
+    pendingOrderBalance: Math.max(0, stats.pendingOrderBalance),
+    lockedBalance: Math.max(0, stats.lockedBalance),
+    unlockTarget: Math.max(0, stats.unlockTarget),
+  });
+
   const saveStats = async (u: UserProfile) => {
     setSavingStatsUid(u.uid);
     try {
-      await setUserProfileStats(u.uid, getStats(u));
+      const stats = clampStats(getStats(u));
+      await setUserProfileStats(u.uid, { creditScore: stats.creditScore, profileCompletionPercent: stats.profileCompletionPercent });
+      const previousBalance = wallets[u.uid]?.available ?? 0;
+      if (stats.balance !== previousBalance) {
+        await setUserWalletBalance(u.uid, stats.balance, previousBalance);
+      }
+      const previousPendingOrder = wallets[u.uid]?.pendingOrder ?? 0;
+      if (stats.pendingOrderBalance !== previousPendingOrder) {
+        await setUserPendingOrderBalance(u.uid, stats.pendingOrderBalance, previousPendingOrder);
+      }
+      const previousLocked = wallets[u.uid]?.locked ?? 0;
+      if (stats.lockedBalance !== previousLocked) {
+        await setUserLockedBalance(u.uid, stats.lockedBalance, previousLocked);
+      }
+      const previousUnlockTarget = wallets[u.uid]?.unlockTarget ?? 0;
+      if (stats.unlockTarget !== previousUnlockTarget) {
+        await setUnlockTarget(u.uid, stats.unlockTarget > 0 ? stats.unlockTarget : null);
+      }
       await load();
       setStatsEdits((prev) => {
         const next = { ...prev };
@@ -91,6 +142,10 @@ export default function AdminUsers() {
                 <th className="text-left px-5 py-3">Role</th>
                 <th className="text-left px-5 py-3">Credit Score</th>
                 <th className="text-left px-5 py-3">Profile %</th>
+                <th className="text-left px-5 py-3">Total Money</th>
+                <th className="text-left px-5 py-3">Pending Order Balance</th>
+                <th className="text-left px-5 py-3">Locked Balance</th>
+                <th className="text-left px-5 py-3">Unlock Target</th>
                 <th className="text-left px-5 py-3">Joined</th>
                 <th className="text-left px-5 py-3">Actions</th>
               </tr>
@@ -98,7 +153,7 @@ export default function AdminUsers() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className={`text-center py-10 text-sm ${textMuted}`}>
+                  <td colSpan={13} className={`text-center py-10 text-sm ${textMuted}`}>
                     No users found.
                   </td>
                 </tr>
@@ -121,6 +176,8 @@ export default function AdminUsers() {
                     <td className="px-5 py-3">
                       <input
                         type="number"
+                        min={1}
+                        max={100}
                         value={getStats(u).creditScore}
                         onChange={(e) => updateStatsEdit(u, "creditScore", Number(e.target.value))}
                         className={`w-20 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
@@ -136,13 +193,76 @@ export default function AdminUsers() {
                         className={`w-16 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
                       />
                     </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1">
+                        <span className={textMuted}>$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={getStats(u).balance}
+                          onChange={(e) => updateStatsEdit(u, "balance", Number(e.target.value))}
+                          className={`w-24 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
+                        />
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1">
+                        <span className={textMuted}>$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          title="Funds the user can place trades with — an admin-set alternative to the 'Fund Order Balance' deposit request"
+                          value={getStats(u).pendingOrderBalance}
+                          onChange={(e) => updateStatsEdit(u, "pendingOrderBalance", Number(e.target.value))}
+                          className={`w-24 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
+                        />
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1">
+                        <span className={textMuted}>$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          title="Balance held against this user's open/first trade"
+                          value={getStats(u).lockedBalance}
+                          onChange={(e) => updateStatsEdit(u, "lockedBalance", Number(e.target.value))}
+                          className={`w-24 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
+                        />
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1">
+                        <span className={textMuted}>$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          placeholder="none"
+                          title="Available balance the user must reach before their locked balance auto-unlocks"
+                          value={getStats(u).unlockTarget || ""}
+                          onChange={(e) => updateStatsEdit(u, "unlockTarget", Number(e.target.value))}
+                          className={`w-24 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
+                        />
+                      </div>
+                    </td>
                     <td className={`px-5 py-3 ${textMuted}`}>{toDate(u).toLocaleDateString()}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1.5">
                         <button
+                          onClick={() => setAddMoneyTarget(u)}
+                          title="Add money to this user's wallet"
+                          className={`p-1.5 rounded-lg ${hoverBg} text-teal-400`}
+                        >
+                          <Wallet size={14} />
+                        </button>
+                        <button
                           onClick={() => saveStats(u)}
                           disabled={savingStatsUid === u.uid}
-                          title="Save credit score / profile %"
+                          title="Save credit score / profile % / total money"
                           className={`p-1.5 rounded-lg disabled:opacity-40 ${hoverBg} ${textMuted}`}
                         >
                           <Save size={14} />
@@ -169,6 +289,15 @@ export default function AdminUsers() {
           </table>
         </div>
       </Panel>
+
+      {addMoneyTarget && (
+        <AddMoneyModal
+          uid={addMoneyTarget.uid}
+          name={addMoneyTarget.name}
+          onClose={() => setAddMoneyTarget(null)}
+          onCredited={load}
+        />
+      )}
     </>
   );
 }

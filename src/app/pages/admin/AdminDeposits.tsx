@@ -59,7 +59,9 @@ export default function AdminDeposits() {
                   <tr key={d.id} className={`text-sm border-t ${divider}`}>
                     <td className={`px-5 py-3 font-mono text-xs ${textMuted}`}>{d.uid.slice(0, 8)}</td>
                     <td className={`px-5 py-3 font-semibold ${textPrimary}`}>${d.amount.toFixed(2)}</td>
-                    <td className={`px-5 py-3 ${textMuted}`}>{d.purpose === "investment" ? `Investment (${d.plan})` : "Wallet"}</td>
+                    <td className={`px-5 py-3 ${textMuted}`}>
+                      {d.purpose === "investment" ? `Investment (${d.plan})` : d.purpose === "order" ? "Order Balance" : "Wallet"}
+                    </td>
                     <td className={`px-5 py-3 ${textMuted}`}>{d.method}</td>
                     <td className="px-5 py-3">
                       <a href={d.proofUrl} target="_blank" rel="noreferrer" className="text-teal-400 hover:underline">

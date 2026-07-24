@@ -1,7 +1,14 @@
 import { collection, getDocs, orderBy, query, where, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-export type TransactionType = "deposit" | "withdrawal" | "roi" | "trade_pnl";
+export type TransactionType =
+  | "deposit"
+  | "withdrawal"
+  | "roi"
+  | "trade_pnl"
+  | "admin_credit"
+  | "order_lock"
+  | "balance_unlock";
 
 export interface TransactionRecord {
   id: string;

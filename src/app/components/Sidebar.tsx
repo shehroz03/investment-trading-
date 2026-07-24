@@ -145,6 +145,10 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
                   <span className={darkMode ? "text-slate-500" : "text-slate-400"}>Username:</span>{" "}
                   <span className="text-teal-500 font-medium">{profile?.username ?? "..."}</span>
                 </span>
+                <span className={`text-xs ${textMuted}`}>
+                  <span className={darkMode ? "text-slate-500" : "text-slate-400"}>Credit Score:</span>{" "}
+                  <span className="text-teal-500 font-medium">{profile?.creditScore ? `${profile.creditScore}/100` : "—"}</span>
+                </span>
               </div>
             </div>
           </div>

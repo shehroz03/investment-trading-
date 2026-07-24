@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -14,7 +14,7 @@ const statusMeta = {
 
 export default function Kyc() {
   const { user, profile } = useAuth();
-  const { textPrimary, textMuted, inputBg } = useThemeClasses();
+  const { textPrimary, textMuted, inputBg, divider } = useThemeClasses();
 
   const [record, setRecord] = useState<KycRecord | null>(null);
   const [fullName, setFullName] = useState("");
@@ -80,26 +80,68 @@ export default function Kyc() {
             <div>
               <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${textMuted}`}>1. Personal Information</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input required placeholder="Full Legal Name" value={fullName} onChange={(e) => setFullName(e.target.value)} className={`px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
-                <input required type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className={`px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
-                <input required placeholder="Residential Address" value={address} onChange={(e) => setAddress(e.target.value)} className={`px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg} sm:col-span-2`} />
-                <input required placeholder="Country" value={country} onChange={(e) => setCountry(e.target.value)} className={`px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
+                <div>
+                  <label className={`block text-xs mb-1.5 ${textMuted}`}>Full Legal Name</label>
+                  <input required placeholder="Full Legal Name" value={fullName} onChange={(e) => setFullName(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
+                </div>
+                <div>
+                  <label className={`block text-xs mb-1.5 ${textMuted}`}>Date of Birth</label>
+                  <input required type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className={`block text-xs mb-1.5 ${textMuted}`}>Residential Address</label>
+                  <input required placeholder="Residential Address" value={address} onChange={(e) => setAddress(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
+                </div>
+                <div>
+                  <label className={`block text-xs mb-1.5 ${textMuted}`}>Country</label>
+                  <input required placeholder="Country" value={country} onChange={(e) => setCountry(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
+                </div>
               </div>
             </div>
 
             <div>
               <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${textMuted}`}>2. Identity Proof</p>
-              <input required type="file" accept="image/*,.pdf" onChange={(e) => setIdProof(e.target.files?.[0] ?? null)} className={`w-full text-sm ${textMuted}`} />
+              <label className={`block text-xs mb-1.5 ${textMuted}`}>Government ID (passport, national ID, driver's license)</label>
+              <div className={`px-3 py-2.5 rounded-xl border ${inputBg}`}>
+                <input required type="file" accept="image/*,.pdf" onChange={(e) => setIdProof(e.target.files?.[0] ?? null)} className={`w-full text-sm ${textMuted}`} />
+              </div>
             </div>
 
             <div>
               <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${textMuted}`}>3. Address Proof</p>
-              <input required type="file" accept="image/*,.pdf" onChange={(e) => setAddressProof(e.target.files?.[0] ?? null)} className={`w-full text-sm ${textMuted}`} />
+              <label className={`block text-xs mb-1.5 ${textMuted}`}>Utility bill, bank statement, or similar (dated within 3 months)</label>
+              <div className={`px-3 py-2.5 rounded-xl border ${inputBg}`}>
+                <input required type="file" accept="image/*,.pdf" onChange={(e) => setAddressProof(e.target.files?.[0] ?? null)} className={`w-full text-sm ${textMuted}`} />
+              </div>
             </div>
 
             <div>
               <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${textMuted}`}>4. Selfie</p>
-              <input required type="file" accept="image/*" onChange={(e) => setSelfie(e.target.files?.[0] ?? null)} className={`w-full text-sm ${textMuted}`} />
+              <label className={`block text-xs mb-1.5 ${textMuted}`}>A clear photo of your face</label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer bg-teal-500/15 text-teal-400 border border-teal-500/30 hover:bg-teal-500/25">
+                  <Camera size={14} />
+                  Take Live Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    onChange={(e) => setSelfie(e.target.files?.[0] ?? null)}
+                    className="hidden"
+                  />
+                </label>
+                <label className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer border ${divider} ${textMuted}`}>
+                  <ImageIcon size={14} />
+                  Choose from Gallery
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setSelfie(e.target.files?.[0] ?? null)}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              {selfie && <p className={`text-xs mt-2 ${textMuted}`}>Selected: {selfie.name}</p>}
             </div>
 
             {error && <p className="text-xs text-red-400">{error}</p>}

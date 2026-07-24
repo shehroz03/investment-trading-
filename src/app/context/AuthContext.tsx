@@ -25,6 +25,10 @@ export interface Wallet {
   available: number;
   locked: number;
   pending: number;
+  pendingOrder: number;
+  unlockTarget: number | null;
+  firstTradePlaced: boolean;
+  lastInterestAt: Timestamp | null;
   totalDeposits: number;
   totalWithdrawals: number;
   totalEarnings: number;
@@ -68,7 +72,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfileResolved(true);
     });
     const unsubWallet = onSnapshot(doc(db, "wallets", user.uid), (snap) => {
-      setWallet(snap.exists() ? (snap.data() as Wallet) : null);
+      if (!snap.exists()) {
+        setWallet(null);
+        return;
+      }
+      // Wallet docs created before pendingOrder/unlockTarget/firstTradePlaced existed won't
+      // have those fields in Firestore yet — default them so consumers always get a number.
+      const data = snap.data();
+      setWallet({
+        available: data.available ?? 0,
+        locked: data.locked ?? 0,
+        pending: data.pending ?? 0,
+        pendingOrder: data.pendingOrder ?? 0,
+        unlockTarget: data.unlockTarget ?? null,
+        firstTradePlaced: data.firstTradePlaced ?? false,
+        lastInterestAt: data.lastInterestAt ?? null,
+        totalDeposits: data.totalDeposits ?? 0,
+        totalWithdrawals: data.totalWithdrawals ?? 0,
+        totalEarnings: data.totalEarnings ?? 0,
+      });
     });
 
     return () => {

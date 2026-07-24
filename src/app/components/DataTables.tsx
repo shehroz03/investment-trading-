@@ -24,6 +24,9 @@ const typeLabels: Record<string, string> = {
   withdrawal: "Withdrawal",
   roi: "Daily ROI",
   trade_pnl: "Trade P&L",
+  admin_credit: "Admin Credit",
+  order_lock: "Balance Locked",
+  balance_unlock: "Balance Unlocked",
 };
 
 export function DataTables({ darkMode, transactions }: DataTablesProps) {

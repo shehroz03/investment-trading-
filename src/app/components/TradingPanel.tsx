@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi } from "lightweight-charts";
-import { TrendingUp, TrendingDown, Timer } from "lucide-react";
+import { TrendingUp, TrendingDown, Timer, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useThemeClasses } from "@/app/components/Panel";
 import {
@@ -13,6 +13,7 @@ import {
 import { fetchKlines, subscribeToKline, fetchSimulatedKlines, subscribeToSimulatedKline, isSimulatedSymbol } from "@/lib/klines";
 import { openTrade, closeTrade, getOpenTrades, TRADE_DURATIONS, type Trade, type TradeDuration } from "@/lib/trading";
 import { AllCoinsModal } from "@/app/components/AllCoinsModal";
+import { TradingRulesModal } from "@/app/components/TradingRulesModal";
 
 const INTERVALS = ["1m", "5m", "15m", "1h"];
 
@@ -59,6 +60,9 @@ export function TradingPanel() {
   const [, setTick] = useState(0);
   const [showCoinPicker, setShowCoinPicker] = useState(false);
   const [settlingUntil, setSettlingUntil] = useState<Record<string, number>>({});
+  // "info" = opened via the corner "Rules" link, just for viewing.
+  // "long"/"short" = opened as a gate before that trade direction — accepting executes the trade.
+  const [rulesModal, setRulesModal] = useState<"info" | "long" | "short" | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -183,6 +187,20 @@ export function TradingPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openPositions]);
 
+  const requestTrade = (direction: "long" | "short") => {
+    const numericAmount = Number(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      setError("Enter a valid amount.");
+      return;
+    }
+    if (wallet && numericAmount > wallet.pendingOrder) {
+      setError("Amount exceeds your Pending Order Balance.");
+      return;
+    }
+    setError(null);
+    setRulesModal(direction);
+  };
+
   const handleTrade = async (direction: "long" | "short") => {
     if (!user) return;
     const numericAmount = Number(amount);
@@ -190,8 +208,8 @@ export function TradingPanel() {
       setError("Enter a valid amount.");
       return;
     }
-    if (wallet && numericAmount > wallet.available) {
-      setError("Amount exceeds your available balance.");
+    if (wallet && numericAmount > wallet.pendingOrder) {
+      setError("Amount exceeds your Pending Order Balance.");
       return;
     }
     setError(null);
@@ -254,13 +272,28 @@ export function TradingPanel() {
                 </button>
               ))}
             </div>
+            <button
+              onClick={() => setRulesModal("info")}
+              className={`ml-auto flex items-center gap-1 text-xs font-medium ${textMuted} hover:text-amber-400`}
+            >
+              <AlertTriangle size={13} />
+              Rules
+            </button>
+            {rulesModal && (
+              <TradingRulesModal
+                onClose={() => setRulesModal(null)}
+                onAccept={() => {
+                  if (rulesModal === "long" || rulesModal === "short") handleTrade(rulesModal);
+                }}
+              />
+            )}
           </div>
           <div ref={containerRef} className="w-full" />
         </div>
 
         <div className="lg:w-72 flex-shrink-0 space-y-3">
           <div>
-            <p className={`text-xs mb-1 ${textMuted}`}>Available: ${(wallet?.available ?? 0).toFixed(2)}</p>
+            <p className={`text-xs mb-1 ${textMuted}`}>Order Balance: ${(wallet?.pendingOrder ?? 0).toFixed(2)}</p>
             <input
               type="number"
               min="1"
@@ -301,14 +334,14 @@ export function TradingPanel() {
 
           <div className="flex gap-2">
             <button
-              onClick={() => handleTrade("long")}
+              onClick={() => requestTrade("long")}
               disabled={submitting !== null}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-green-500/15 hover:bg-green-500/25 text-green-400 border border-green-500/30 rounded-xl text-sm font-semibold disabled:opacity-60"
             >
               <TrendingUp size={15} /> {submitting === "long" ? "..." : "Buy / Long"}
             </button>
             <button
-              onClick={() => handleTrade("short")}
+              onClick={() => requestTrade("short")}
               disabled={submitting !== null}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 rounded-xl text-sm font-semibold disabled:opacity-60"
             >

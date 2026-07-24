@@ -37,7 +37,10 @@ function getSimulatedPrice(symbol, atMs) {
 
 async function fetchPrice(symbol) {
   if (SIMULATED_RANGES[symbol]) return getSimulatedPrice(symbol, Date.now());
-  const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+  // api.binance.com blocks requests from most cloud/serverless IP ranges (Vercel runs on
+  // AWS). data-api.binance.vision is Binance's own public read-only market-data mirror,
+  // meant for exactly this kind of server-side lookup, and isn't subject to the same block.
+  const res = await fetch(`https://data-api.binance.vision/api/v3/ticker/price?symbol=${symbol}`);
   if (!res.ok) throw new HttpError(503, "Could not fetch market price. Try again.");
   const data = await res.json();
   const price = parseFloat(data.price);

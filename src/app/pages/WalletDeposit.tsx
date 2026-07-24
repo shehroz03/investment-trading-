@@ -118,8 +118,12 @@ export default function WalletDeposit() {
   const [searchParams] = useSearchParams();
   const { textPrimary, textMuted, inputBg, divider } = useThemeClasses();
 
-  const [purpose, setPurpose] = useState<"wallet" | "investment">(
-    searchParams.get("purpose") === "investment" ? "investment" : "wallet"
+  const [purpose, setPurpose] = useState<"wallet" | "investment" | "order">(
+    searchParams.get("purpose") === "investment"
+      ? "investment"
+      : searchParams.get("purpose") === "order"
+        ? "order"
+        : "wallet"
   );
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [plan, setPlan] = useState("");
@@ -196,7 +200,7 @@ export default function WalletDeposit() {
       <Panel>
         <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
           <div className="flex gap-2">
-            {(["wallet", "investment"] as const).map((p) => (
+            {(["wallet", "order", "investment"] as const).map((p) => (
               <button
                 type="button"
                 key={p}
@@ -205,7 +209,7 @@ export default function WalletDeposit() {
                   purpose === p ? "bg-teal-500/15 text-teal-400 border-teal-500/30" : `${textMuted} ${divider}`
                 }`}
               >
-                {p === "wallet" ? "Wallet Top-Up" : "Investment Plan"}
+                {p === "wallet" ? "Wallet Top-Up" : p === "order" ? "Fund Order Balance" : "Investment Plan"}
               </button>
             ))}
           </div>
