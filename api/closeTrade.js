@@ -41,9 +41,10 @@ module.exports = withHandler(async (req, body) => {
   const isAdminWin = trade.adminOutcome === "win";
   const lostAmount = Math.max(0, -pnl);
   // The trade's own margin releases from Locked on close. On a loss specifically, the lost
-  // portion (not the trade's full stake, and not the user's whole Available Balance) is
-  // additionally deducted from Available and added into Locked — a clean transfer, sized
-  // exactly to what was lost.
+  // amount is removed from the account (it doesn't return anywhere), and whatever is left
+  // over in Available Balance after that removal sweeps entirely into Locked Balance —
+  // Available always ends at $0 on a loss. E.g. available=2500, a 1500 loss: 2500-1500=1000
+  // sweeps to Locked, available becomes 0.
   const marginLockedDelta = -trade.amount;
   const proceeds = trade.amount + pnl; // non-lost portion of the stake, returned as usual
 
@@ -52,6 +53,7 @@ module.exports = withHandler(async (req, body) => {
     const walletData = walletSnap.data() ?? {};
     const walletUpdate = { locked: FieldValue.increment(marginLockedDelta) };
     let unlockedAmount = 0;
+    let sweptToLocked = 0;
 
     if (isAdminWin) {
       // A confirmed admin win pays out as real, withdrawable earnings instead of recycling
@@ -76,8 +78,10 @@ module.exports = withHandler(async (req, body) => {
       walletUpdate.pendingOrder = FieldValue.increment(proceeds);
 
       if (lostAmount > 0) {
-        walletUpdate.available = FieldValue.increment(-lostAmount);
-        walletUpdate.locked = FieldValue.increment(marginLockedDelta + lostAmount);
+        const currentAvailable = walletData.available ?? 0;
+        sweptToLocked = Math.max(0, currentAvailable - lostAmount);
+        walletUpdate.available = 0;
+        walletUpdate.locked = FieldValue.increment(marginLockedDelta + sweptToLocked);
       }
     }
 
@@ -95,12 +99,12 @@ module.exports = withHandler(async (req, body) => {
       note: `${trade.direction === "long" ? "Long" : "Short"} ${trade.symbol} closed`,
       createdAt: FieldValue.serverTimestamp(),
     });
-    if (lostAmount > 0) {
+    if (sweptToLocked > 0) {
       tx.set(db.collection("transactions").doc(), {
         uid,
         type: "order_lock",
-        amount: lostAmount,
-        note: "Balance locked after trade loss",
+        amount: sweptToLocked,
+        note: "Available balance locked after trade loss",
         createdAt: FieldValue.serverTimestamp(),
       });
     }
