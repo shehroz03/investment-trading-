@@ -1,0 +1,174 @@
+import { useEffect, useState } from "react";
+import { Users, ShieldCheck, Shield, Save } from "lucide-react";
+import { useAuth } from "@/app/context/AuthContext";
+import { PageHeader } from "@/app/components/PageHeader";
+import { Panel, useThemeClasses } from "@/app/components/Panel";
+import { getAllUsers, setUserRole, setUserProfileStats } from "@/lib/admin";
+import type { UserProfile } from "@/app/context/AuthContext";
+
+interface StatsEdit {
+  creditScore: number;
+  profileCompletionPercent: number;
+}
+
+export default function AdminUsers() {
+  const { user: currentUser } = useAuth();
+  const { textPrimary, textMuted, divider, theadBg, inputBg, hoverBg } = useThemeClasses();
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [search, setSearch] = useState("");
+  const [busyUid, setBusyUid] = useState<string | null>(null);
+  const [statsEdits, setStatsEdits] = useState<Record<string, StatsEdit>>({});
+  const [savingStatsUid, setSavingStatsUid] = useState<string | null>(null);
+
+  const load = () => getAllUsers().then(setUsers);
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const toggleRole = async (u: UserProfile) => {
+    setBusyUid(u.uid);
+    try {
+      await setUserRole(u.uid, u.role === "admin" ? "user" : "admin");
+      await load();
+    } finally {
+      setBusyUid(null);
+    }
+  };
+
+  const getStats = (u: UserProfile): StatsEdit =>
+    statsEdits[u.uid] ?? { creditScore: u.creditScore ?? 0, profileCompletionPercent: u.profileCompletionPercent ?? 0 };
+
+  const updateStatsEdit = (u: UserProfile, field: keyof StatsEdit, value: number) => {
+    setStatsEdits((prev) => ({ ...prev, [u.uid]: { ...getStats(u), [field]: value } }));
+  };
+
+  const saveStats = async (u: UserProfile) => {
+    setSavingStatsUid(u.uid);
+    try {
+      await setUserProfileStats(u.uid, getStats(u));
+      await load();
+      setStatsEdits((prev) => {
+        const next = { ...prev };
+        delete next[u.uid];
+        return next;
+      });
+    } finally {
+      setSavingStatsUid(null);
+    }
+  };
+
+  const filtered = users.filter(
+    (u) =>
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.username.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toDate = (u: UserProfile) => (u.createdAt as unknown as { toDate?: () => Date })?.toDate?.() ?? new Date(0);
+
+  return (
+    <>
+      <PageHeader icon={<Users size={20} />} title="Users" subtitle={`${users.length} registered accounts`} />
+
+      <Panel className="!p-0 overflow-hidden">
+        <div className="p-4 border-b border-inherit">
+          <input
+            placeholder="Search by name, username, or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={`w-full sm:w-80 px-3 py-2 rounded-lg border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+          />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className={`text-xs font-semibold uppercase tracking-wider ${theadBg}`}>
+                <th className="text-left px-5 py-3">Name</th>
+                <th className="text-left px-5 py-3">Username</th>
+                <th className="text-left px-5 py-3">Email</th>
+                <th className="text-left px-5 py-3">KYC</th>
+                <th className="text-left px-5 py-3">Role</th>
+                <th className="text-left px-5 py-3">Credit Score</th>
+                <th className="text-left px-5 py-3">Profile %</th>
+                <th className="text-left px-5 py-3">Joined</th>
+                <th className="text-left px-5 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className={`text-center py-10 text-sm ${textMuted}`}>
+                    No users found.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((u) => (
+                  <tr key={u.uid} className={`text-sm border-t ${divider}`}>
+                    <td className={`px-5 py-3 ${textPrimary}`}>{u.name}</td>
+                    <td className={`px-5 py-3 ${textMuted}`}>{u.username}</td>
+                    <td className={`px-5 py-3 ${textMuted}`}>{u.email}</td>
+                    <td className="px-5 py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${u.kycStatus === "approved" ? "bg-green-500/15 text-green-400" : "bg-slate-500/15 text-slate-400"}`}>
+                        {u.kycStatus}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${u.role === "admin" ? "bg-teal-500/15 text-teal-400" : "bg-slate-500/15 text-slate-400"}`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="number"
+                        value={getStats(u).creditScore}
+                        onChange={(e) => updateStatsEdit(u, "creditScore", Number(e.target.value))}
+                        className={`w-20 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
+                      />
+                    </td>
+                    <td className="px-5 py-3">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={getStats(u).profileCompletionPercent}
+                        onChange={(e) => updateStatsEdit(u, "profileCompletionPercent", Number(e.target.value))}
+                        className={`w-16 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
+                      />
+                    </td>
+                    <td className={`px-5 py-3 ${textMuted}`}>{toDate(u).toLocaleDateString()}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => saveStats(u)}
+                          disabled={savingStatsUid === u.uid}
+                          title="Save credit score / profile %"
+                          className={`p-1.5 rounded-lg disabled:opacity-40 ${hoverBg} ${textMuted}`}
+                        >
+                          <Save size={14} />
+                        </button>
+                        <button
+                          onClick={() => toggleRole(u)}
+                          disabled={busyUid === u.uid || u.uid === currentUser?.uid}
+                          title={u.uid === currentUser?.uid ? "You can't change your own role" : undefined}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 ${
+                            u.role === "admin"
+                              ? "bg-red-500/15 text-red-400 border border-red-500/30"
+                              : "bg-teal-500/15 text-teal-400 border border-teal-500/30"
+                          }`}
+                        >
+                          {u.role === "admin" ? <Shield size={13} /> : <ShieldCheck size={13} />}
+                          {busyUid === u.uid ? "..." : u.role === "admin" ? "Revoke Admin" : "Make Admin"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </>
+  );
+}

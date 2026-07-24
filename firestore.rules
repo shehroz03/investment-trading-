@@ -1,0 +1,110 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Profiles are private: only the owner or an admin can read/write them.
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid);
+      allow update: if isAdmin() ||
+        (isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']));
+      allow delete: if false;
+    }
+
+    match /wallets/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) &&
+        request.resource.data.available == 0 &&
+        request.resource.data.pending == 0;
+      // Self-service update is only for creating a withdrawal request: money moves from
+      // available into pending, total unchanged, no other field touched. Everything else
+      // (approvals, deposits) is admin-only.
+      allow update: if isAdmin() ||
+        (isOwner(uid) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['available', 'pending']) &&
+          request.resource.data.available + request.resource.data.pending == resource.data.available + resource.data.pending &&
+          request.resource.data.available >= 0 &&
+          request.resource.data.available <= resource.data.available);
+      allow delete: if false;
+    }
+
+    match /deposits/{id} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
+      allow update: if isAdmin() && resource.data.status == 'pending';
+      allow delete: if false;
+    }
+
+    match /withdrawals/{id} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
+      allow update: if isAdmin() && resource.data.status == 'pending';
+      allow delete: if false;
+    }
+
+    match /kyc/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isAdmin() ||
+        (isOwner(uid) && request.resource.data.status == 'pending' && (resource == null || resource.data.status != 'approved'));
+    }
+
+    match /investments/{id} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Trades are opened/closed exclusively through the openTrade/closeTrade Cloud Functions,
+    // which use the Admin SDK (not subject to these rules) so the entry/close price and the
+    // resulting wallet math can't be fabricated by a client. No direct client writes here.
+    match /trades/{id} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+
+    // Immutable ledger: only admin-triggered flows (deposit/withdrawal approval)
+    // ever create a transaction record; nothing may edit or delete one afterwards.
+    match /transactions/{id} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /news/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /guides/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /banners/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Tunable business config: self-seeds with defaults on first run, admin-editable after.
+    match /config/{doc} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && resource == null;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+  }
+}
