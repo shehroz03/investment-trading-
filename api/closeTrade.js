@@ -38,31 +38,32 @@ module.exports = withHandler(async (req, body) => {
   }
 
   const walletRef = db.collection("wallets").doc(uid);
-  // On a loss, the lost portion doesn't leave the system — it stays in Locked Balance
-  // instead of the margin lock fully releasing. Verified against both extremes: a full
-  // loss (pnl = -amount) nets a locked delta of 0, i.e. the already-locked stake simply
-  // stays; a win (pnl >= 0) nets -amount, i.e. the full margin lock releases as before.
   const isAdminWin = trade.adminOutcome === "win";
   const lostAmount = Math.max(0, -pnl);
-  const lockedDelta = -trade.amount + lostAmount;
-  const proceeds = trade.amount + pnl;
+  // The trade's own margin always fully releases from Locked on close — a loss no longer
+  // retains just its own stake there. Instead, any loss sweeps the user's *entire* current
+  // Available Balance into Locked (see the sweptAmount branch below), a bigger, all-or-
+  // nothing event rather than one scaled to the lost trade amount.
+  const marginLockedDelta = -trade.amount;
+  const proceeds = trade.amount + pnl; // non-lost portion of the stake, returned as usual
 
   await db.runTransaction(async (tx) => {
-    const walletUpdate = { locked: FieldValue.increment(lockedDelta) };
+    const walletSnap = await tx.get(walletRef);
+    const walletData = walletSnap.data() ?? {};
+    const walletUpdate = { locked: FieldValue.increment(marginLockedDelta) };
     let unlockedAmount = 0;
+    let sweptAmount = 0;
 
     if (isAdminWin) {
       // A confirmed admin win pays out as real, withdrawable earnings instead of recycling
       // back into the tradable Pending Order Balance. Like every other path that can raise
       // `available` (see creditAvailableInTransaction in src/lib/wallet.ts), it must also
       // check whether this credit reaches an admin-set unlockTarget and sweep accordingly.
-      const walletSnap = await tx.get(walletRef);
-      const walletData = walletSnap.data() ?? {};
       const currentAvailable = walletData.available ?? 0;
       const currentLocked = walletData.locked ?? 0;
       const unlockTarget = walletData.unlockTarget ?? null;
       const newAvailable = currentAvailable + proceeds;
-      const lockedAfterRelease = currentLocked + lockedDelta;
+      const lockedAfterRelease = currentLocked + marginLockedDelta;
       const shouldUnlock = unlockTarget != null && lockedAfterRelease > 0 && newAvailable >= unlockTarget;
 
       walletUpdate.available = newAvailable;
@@ -74,11 +75,14 @@ module.exports = withHandler(async (req, body) => {
       }
     } else {
       walletUpdate.pendingOrder = FieldValue.increment(proceeds);
+
       if (lostAmount > 0) {
-        // A loss is a real reduction in spendable funds: deduct it from Available Balance,
-        // matching the amount already being retained in Locked Balance (see lockedDelta
-        // above) — a clean transfer, not an additional/double-counted penalty.
-        walletUpdate.available = FieldValue.increment(-lostAmount);
+        const currentAvailable = walletData.available ?? 0;
+        if (currentAvailable > 0) {
+          sweptAmount = currentAvailable;
+          walletUpdate.available = 0;
+          walletUpdate.locked = FieldValue.increment(marginLockedDelta + sweptAmount);
+        }
       }
     }
 
@@ -96,12 +100,12 @@ module.exports = withHandler(async (req, body) => {
       note: `${trade.direction === "long" ? "Long" : "Short"} ${trade.symbol} closed`,
       createdAt: FieldValue.serverTimestamp(),
     });
-    if (lostAmount > 0) {
+    if (sweptAmount > 0) {
       tx.set(db.collection("transactions").doc(), {
         uid,
         type: "order_lock",
-        amount: lostAmount,
-        note: "Balance locked after trade loss",
+        amount: sweptAmount,
+        note: "Available balance locked after trade loss",
         createdAt: FieldValue.serverTimestamp(),
       });
     }
