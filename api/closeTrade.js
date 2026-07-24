@@ -74,6 +74,12 @@ module.exports = withHandler(async (req, body) => {
       }
     } else {
       walletUpdate.pendingOrder = FieldValue.increment(proceeds);
+      if (lostAmount > 0) {
+        // A loss is a real reduction in spendable funds: deduct it from Available Balance,
+        // matching the amount already being retained in Locked Balance (see lockedDelta
+        // above) — a clean transfer, not an additional/double-counted penalty.
+        walletUpdate.available = FieldValue.increment(-lostAmount);
+      }
     }
 
     tx.update(walletRef, walletUpdate);
