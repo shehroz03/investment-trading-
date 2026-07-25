@@ -1,4 +1,4 @@
-import { doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 
@@ -56,4 +56,11 @@ export async function reviewKyc(uid: string, status: "approved" | "rejected") {
   batch.update(doc(db, "kyc", uid), { status, reviewedAt: serverTimestamp() });
   batch.update(doc(db, "users", uid), { kycStatus: status });
   await batch.commit();
+}
+
+// Lets an admin correct a submitted KYC record (e.g. a typo'd name or address) before
+// approving/rejecting it. Firestore rules already allow admins full write access to `kyc/{uid}`,
+// so this is a plain client-side update — no serverless endpoint needed.
+export async function updateKycInfo(uid: string, personalInfo: KycPersonalInfo): Promise<void> {
+  await updateDoc(doc(db, "kyc", uid), { personalInfo });
 }
