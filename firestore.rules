@@ -20,8 +20,14 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
       allow create: if isOwner(uid);
+      // Self-service update covers two cases: editing your own display name, and
+      // submitKyc's own-profile mirror write (kyc.ts sets kycStatus alongside the actual
+      // kyc/{uid} doc) -- restricted to 'pending' only so a user can't self-approve/-reject.
       allow update: if isAdmin() ||
-        (isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']));
+        (isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) ||
+        (isOwner(uid) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kycStatus']) &&
+          request.resource.data.kycStatus == 'pending');
       allow delete: if false;
     }
 
