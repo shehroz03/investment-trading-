@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import { TrendingUp, TrendingDown, Timer, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -8,7 +8,9 @@ import {
   SIMULATED_COIN_META,
   subscribeToCryptoTicker,
   subscribeToSimulatedTicker,
+  subscribeToAllTickers,
   type CryptoTick,
+  type MarketTick,
 } from "@/lib/crypto";
 import { fetchKlines, subscribeToKline, fetchSimulatedKlines, subscribeToSimulatedKline, isSimulatedSymbol } from "@/lib/klines";
 import { openTrade, closeTrade, getOpenTrades, TRADE_DURATIONS, type Trade, type TradeDuration } from "@/lib/trading";
@@ -59,6 +61,7 @@ export function TradingPanel() {
   const [closingId, setClosingId] = useState<string | null>(null);
   const [, setTick] = useState(0);
   const [showCoinPicker, setShowCoinPicker] = useState(false);
+  const [allTickers, setAllTickers] = useState<MarketTick[]>([]);
   const [settlingUntil, setSettlingUntil] = useState<Record<string, number>>({});
   // "info" = opened via the corner "Rules" link, just for viewing.
   // "long"/"short" = opened as a gate before that trade direction — accepting executes the trade.
@@ -133,6 +136,27 @@ export function TradingPanel() {
       unsubscribeSimulated();
     };
   }, []);
+
+  // Populates the coin dropdown with every live USDT market (short symbol only), not just
+  // the pinned favorites — same data source AllCoinsModal already uses.
+  useEffect(() => {
+    const unsubscribe = subscribeToAllTickers(setAllTickers);
+    return unsubscribe;
+  }, []);
+
+  const sortedTickers = useMemo(
+    () => [...allTickers].sort((a, b) => b.quoteVolume - a.quoteVolume),
+    [allTickers]
+  );
+  const knownSymbols = useMemo(
+    () =>
+      new Set([
+        ...sortedTickers.map((t) => t.symbol),
+        ...Object.keys(COIN_META).map((s) => s.toUpperCase()),
+        ...Object.keys(SIMULATED_COIN_META).map((s) => s.toUpperCase()),
+      ]),
+    [sortedTickers]
+  );
 
   // Drives the countdown text on timed positions.
   useEffect(() => {
@@ -235,14 +259,23 @@ export function TradingPanel() {
               onChange={(e) => setSymbol(e.target.value)}
               className={`px-3 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
             >
-              {Object.entries({ ...COIN_META, ...SIMULATED_COIN_META }).map(([sym, meta]) => (
+              {sortedTickers.length > 0
+                ? sortedTickers.map((t) => (
+                    <option key={t.symbol} value={t.symbol}>
+                      {t.base}
+                    </option>
+                  ))
+                : Object.keys(COIN_META).map((sym) => (
+                    <option key={sym} value={sym.toUpperCase()}>
+                      {sym.replace(/usdt$/, "").toUpperCase()}
+                    </option>
+                  ))}
+              {Object.keys(SIMULATED_COIN_META).map((sym) => (
                 <option key={sym} value={sym.toUpperCase()}>
-                  {meta.label}
+                  {sym.replace(/usdt$/, "").toUpperCase()}
                 </option>
               ))}
-              {!(symbol.toLowerCase() in { ...COIN_META, ...SIMULATED_COIN_META }) && (
-                <option value={symbol}>{symbol.replace(/USDT$/, "")}</option>
-              )}
+              {!knownSymbols.has(symbol) && <option value={symbol}>{symbol.replace(/USDT$/, "")}</option>}
             </select>
             <button
               onClick={() => setShowCoinPicker(true)}
