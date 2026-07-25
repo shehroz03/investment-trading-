@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi } from "lightweight-charts";
-import { TrendingUp, TrendingDown, Timer, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, Timer, AlertTriangle, Lock } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useThemeClasses } from "@/app/components/Panel";
 import {
@@ -184,6 +184,11 @@ export function TradingPanel() {
     try {
       await closeTrade(tradeId);
       loadPositions();
+    } catch (err) {
+      // Most commonly hit if an admin froze this trade between it being loaded and the
+      // auto-close timer firing — the position stays open, so refresh to reflect that.
+      setError(err instanceof Error ? err.message : "Failed to close trade.");
+      loadPositions();
     } finally {
       setClosingId((current) => (current === tradeId ? null : current));
       setSettlingUntil((prev) => {
@@ -201,7 +206,7 @@ export function TradingPanel() {
   // outcome — the countdown shown to the user is genuine, not a stall.
   useEffect(() => {
     for (const pos of openPositions) {
-      if (!pos.expiresAt || armedRef.current.has(pos.id)) continue;
+      if (!pos.expiresAt || pos.frozen || armedRef.current.has(pos.id)) continue;
       armedRef.current.add(pos.id);
       const msUntilExpiry = pos.expiresAt.toMillis() - Date.now();
 
@@ -417,7 +422,12 @@ export function TradingPanel() {
                           {livePnl === null ? "—" : `${positive ? "+" : ""}$${livePnl.toFixed(2)}`}
                         </p>
                       </div>
-                      {settleAt !== undefined ? (
+                      {pos.frozen ? (
+                        <span className="flex items-center gap-1 text-xs font-semibold text-sky-400" title="An admin has frozen this trade — it can't be closed until unfrozen.">
+                          <Lock size={12} />
+                          Frozen
+                        </span>
+                      ) : settleAt !== undefined ? (
                         <span className="flex items-center gap-1 text-xs font-semibold text-amber-400">
                           <Timer size={12} className="animate-pulse" />
                           Settling... {formatRemaining(settleAt - Date.now())}

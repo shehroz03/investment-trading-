@@ -41,6 +41,9 @@ export interface Trade {
   adminOutcome?: TradeOutcome | null;
   adminOutcomeBy?: string;
   adminOutcomeAt?: Timestamp | null;
+  frozen?: boolean;
+  frozenBy?: string;
+  frozenAt?: Timestamp | null;
 }
 
 export async function openTrade(
@@ -63,6 +66,12 @@ export async function closeTrade(tradeId: string) {
 
 export async function setTradeOutcome(tradeId: string, outcome: TradeOutcome) {
   return callTradingApi<{ ok: boolean }>("setTradeOutcome", { tradeId, outcome });
+}
+
+// Freezing a trade blocks it from being closed — manually or via auto-settlement — until an
+// admin unfreezes it. Enforced server-side in api/closeTrade.js, not just in the UI.
+export async function setTradeFrozen(tradeId: string, frozen: boolean) {
+  return callTradingApi<{ ok: boolean }>("setTradeFrozen", { tradeId, frozen });
 }
 
 // No cron in this project — call this whenever the wallet page loads so any elapsed days of

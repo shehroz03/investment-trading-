@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { LineChart } from "lucide-react";
+import { LineChart, Lock, Unlock } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
 import { getAllTrades } from "@/lib/admin";
-import { setTradeOutcome, type Trade } from "@/lib/trading";
+import { setTradeOutcome, setTradeFrozen, type Trade } from "@/lib/trading";
 
 export default function AdminTrades() {
   const { textPrimary, textMuted, divider, theadBg, hoverBg } = useThemeClasses();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [freezingId, setFreezingId] = useState<string | null>(null);
 
   useEffect(() => {
     getAllTrades().then(setTrades);
@@ -21,6 +22,18 @@ export default function AdminTrades() {
       setTrades((prev) => prev.map((t) => (t.id === tradeId ? { ...t, adminOutcome: outcome } : t)));
     } finally {
       setActingId(null);
+    }
+  };
+
+  // Freezing blocks a trade from being closed — manually or via auto-settlement — until
+  // unfrozen. Enforced server-side in api/closeTrade.js, not just here in the UI.
+  const handleToggleFrozen = async (tradeId: string, currentlyFrozen: boolean) => {
+    setFreezingId(tradeId);
+    try {
+      await setTradeFrozen(tradeId, !currentlyFrozen);
+      setTrades((prev) => prev.map((t) => (t.id === tradeId ? { ...t, frozen: !currentlyFrozen } : t)));
+    } finally {
+      setFreezingId(null);
     }
   };
 
@@ -50,12 +63,13 @@ export default function AdminTrades() {
                 <th className="text-left px-5 py-3">Status</th>
                 <th className="text-left px-5 py-3">Opened</th>
                 <th className="text-left px-5 py-3">Outcome</th>
+                <th className="text-left px-5 py-3">Freeze</th>
               </tr>
             </thead>
             <tbody>
               {trades.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className={`text-center py-10 text-sm ${textMuted}`}>
+                  <td colSpan={11} className={`text-center py-10 text-sm ${textMuted}`}>
                     No trades yet.
                   </td>
                 </tr>
@@ -74,9 +88,16 @@ export default function AdminTrades() {
                       {t.pnl === undefined ? "—" : `${t.pnl >= 0 ? "+" : ""}$${t.pnl.toFixed(2)}`}
                     </td>
                     <td className="px-5 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${t.status === "open" ? "bg-amber-500/15 text-amber-400" : "bg-slate-500/15 text-slate-400"}`}>
-                        {t.status}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${t.status === "open" ? "bg-amber-500/15 text-amber-400" : "bg-slate-500/15 text-slate-400"}`}>
+                          {t.status}
+                        </span>
+                        {t.status === "open" && t.frozen && (
+                          <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-400">
+                            <Lock size={11} /> frozen
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className={`px-5 py-3 ${textMuted}`}>{t.openedAt ? t.openedAt.toDate().toLocaleString() : "—"}</td>
                     <td className="px-5 py-3">
@@ -103,6 +124,24 @@ export default function AdminTrades() {
                             Loss
                           </button>
                         </div>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      {t.status !== "open" ? (
+                        <span className={`text-xs ${textMuted}`}>—</span>
+                      ) : (
+                        <button
+                          onClick={() => handleToggleFrozen(t.id, Boolean(t.frozen))}
+                          disabled={freezingId === t.id}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold disabled:opacity-60 ${
+                            t.frozen
+                              ? "text-sky-400 border border-sky-500/30"
+                              : `${textMuted} border ${divider}`
+                          } ${hoverBg}`}
+                        >
+                          {t.frozen ? <Unlock size={12} /> : <Lock size={12} />}
+                          {freezingId === t.id ? "..." : t.frozen ? "Unfreeze" : "Freeze"}
+                        </button>
                       )}
                     </td>
                   </tr>

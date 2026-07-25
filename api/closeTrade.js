@@ -17,6 +17,7 @@ module.exports = withHandler(async (req, body) => {
   const trade = tradeSnap.data();
   if (trade.uid !== uid) throw new HttpError(403, "Not your trade.");
   if (trade.status !== "open") throw new HttpError(400, "Trade is already closed.");
+  if (trade.frozen) throw new HttpError(400, "This trade is frozen by an admin and cannot be closed.");
 
   const closePrice = await fetchPrice(trade.symbol);
   let pnl;
