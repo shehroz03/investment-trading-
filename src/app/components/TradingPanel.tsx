@@ -79,6 +79,8 @@ export function TradingPanel() {
   // "info" = opened via the corner "Rules" link, just for viewing.
   // "long"/"short" = opened as a gate before that trade direction — accepting executes the trade.
   const [rulesModal, setRulesModal] = useState<"info" | "long" | "short" | null>(null);
+  // Shown briefly right after a position closes — the trade's actual final P&L, not a preview.
+  const [tradeResult, setTradeResult] = useState<{ trade: Trade; pnl: number } | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -204,8 +206,12 @@ export function TradingPanel() {
 
   const handleClose = async (tradeId: string) => {
     setClosingId(tradeId);
+    const closedPosition = openPositions.find((p) => p.id === tradeId);
     try {
-      await closeTrade(tradeId);
+      const { pnl } = await closeTrade(tradeId);
+      // Shows the trade's real, already-computed P&L — nothing fabricated or animated here,
+      // just surfacing the actual result once the position settles.
+      if (closedPosition) setTradeResult({ trade: closedPosition, pnl });
     } catch (err) {
       // Most commonly hit if an admin froze this trade between it being loaded and the
       // auto-close timer firing — the live subscription already reflects that either way.
@@ -302,6 +308,12 @@ export function TradingPanel() {
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openPositions, symbol, interval]);
+
+  useEffect(() => {
+    if (!tradeResult) return;
+    const id = setTimeout(() => setTradeResult(null), 6000);
+    return () => clearTimeout(id);
+  }, [tradeResult]);
 
   const requestTrade = (direction: "long" | "short") => {
     const numericAmount = Number(amount);
@@ -415,6 +427,30 @@ export function TradingPanel() {
             )}
           </div>
           <div ref={containerRef} className="w-full" />
+
+          {tradeResult && (
+            <div
+              className={`mt-3 flex items-center justify-between p-3 rounded-xl border ${
+                tradeResult.pnl >= 0 ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/30"
+              }`}
+            >
+              <div>
+                <p className={`text-sm font-semibold ${tradeResult.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  Trade {tradeResult.pnl >= 0 ? "Won" : "Lost"} — {tradeResult.trade.direction === "long" ? "Long" : "Short"}{" "}
+                  {tradeResult.trade.symbol.replace("USDT", "")}
+                </p>
+                <p className={`text-xs ${textMuted}`}>Stake: ${tradeResult.trade.amount.toFixed(2)}</p>
+              </div>
+              <div className="text-right">
+                <p className={`text-lg font-bold ${tradeResult.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  {tradeResult.pnl >= 0 ? "+" : ""}${tradeResult.pnl.toFixed(2)}
+                </p>
+                <button onClick={() => setTradeResult(null)} className={`text-xs ${textMuted} hover:underline`}>
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="lg:w-72 flex-shrink-0 space-y-3">
