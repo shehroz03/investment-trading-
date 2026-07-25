@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users, Save } from "lucide-react";
+import { Users, Save, KeyRound } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
 import {
@@ -12,6 +12,7 @@ import {
   setUserLockedBalance,
   type WalletSummary,
 } from "@/lib/admin";
+import { ChangePasswordModal } from "@/app/components/ChangePasswordModal";
 import type { UserProfile } from "@/app/context/AuthContext";
 
 interface StatsEdit {
@@ -31,6 +32,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [statsEdits, setStatsEdits] = useState<Record<string, StatsEdit>>({});
   const [savingStatsUid, setSavingStatsUid] = useState<string | null>(null);
+  const [passwordTarget, setPasswordTarget] = useState<UserProfile | null>(null);
 
   const load = () => Promise.all([getAllUsers().then(setUsers), getAllWallets().then(setWallets)]);
 
@@ -235,14 +237,23 @@ export default function AdminUsers() {
                     </td>
                     <td className={`px-5 py-3 ${textMuted}`}>{toDate(u).toLocaleDateString()}</td>
                     <td className="px-5 py-3">
-                      <button
-                        onClick={() => saveStats(u)}
-                        disabled={savingStatsUid === u.uid}
-                        title="Save credit score / profile % / total money"
-                        className={`p-1.5 rounded-lg disabled:opacity-40 ${hoverBg} ${textMuted}`}
-                      >
-                        <Save size={14} />
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => saveStats(u)}
+                          disabled={savingStatsUid === u.uid}
+                          title="Save credit score / profile % / total money"
+                          className={`p-1.5 rounded-lg disabled:opacity-40 ${hoverBg} ${textMuted}`}
+                        >
+                          <Save size={14} />
+                        </button>
+                        <button
+                          onClick={() => setPasswordTarget(u)}
+                          title="Change this user's password"
+                          className={`p-1.5 rounded-lg ${hoverBg} text-teal-400`}
+                        >
+                          <KeyRound size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -251,6 +262,10 @@ export default function AdminUsers() {
           </table>
         </div>
       </Panel>
+
+      {passwordTarget && (
+        <ChangePasswordModal uid={passwordTarget.uid} name={passwordTarget.name} onClose={() => setPasswordTarget(null)} />
+      )}
     </>
   );
 }

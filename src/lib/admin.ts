@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { UserProfile } from "@/app/context/AuthContext";
-import type { Trade } from "@/lib/trading";
+import { callTradingApi, type Trade } from "@/lib/trading";
 import { creditAvailableInTransaction, creditPendingOrderAndRecoverLocked } from "@/lib/wallet";
 
 export interface PendingDeposit {
@@ -215,4 +215,11 @@ export async function setUserLockedBalance(uid: string, newLocked: number, previ
     createdAt: serverTimestamp(),
   });
   await batch.commit();
+}
+
+// Firebase Auth accounts aren't Firestore documents — changing another user's password
+// requires the Admin SDK, so this goes through api/setUserPassword.js (which re-checks the
+// caller is an admin server-side) rather than any direct client-side write.
+export async function setUserPassword(targetUid: string, newPassword: string): Promise<void> {
+  await callTradingApi<{ ok: boolean }>("setUserPassword", { targetUid, newPassword });
 }

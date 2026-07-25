@@ -3,7 +3,9 @@ import { db, auth } from "@/lib/firebase";
 
 const TRADING_API_URL = import.meta.env.VITE_TRADING_API_URL;
 
-async function callTradingApi<T>(endpoint: string, body: unknown): Promise<T> {
+// Shared by every module that calls one of this project's Vercel serverless functions
+// (trading, admin actions, etc.) — not trading-specific despite the name's history.
+export async function callTradingApi<T>(endpoint: string, body: unknown): Promise<T> {
   const idToken = await auth.currentUser?.getIdToken();
   if (!idToken) throw new Error("Sign in required.");
 
