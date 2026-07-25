@@ -156,6 +156,10 @@ export default function WalletWithdraw() {
       setError("Select a time limit first.");
       return;
     }
+    if (Date.now() < deadline) {
+      setError("Wait for the time limit to finish before submitting.");
+      return;
+    }
     const numericAmount = Number(amount);
     if (!numericAmount || numericAmount <= 0) {
       setError("Enter a valid amount.");
@@ -198,7 +202,13 @@ export default function WalletWithdraw() {
     );
   }
 
-  const remainingMs = deadline !== null ? deadline - Date.now() : null;
+  const now = Date.now();
+  const remainingMs = deadline !== null ? deadline - now : null;
+  // The submit window opens only once the countdown actually reaches zero, and stays open
+  // for SUBMIT_GRACE_MS — deadline flips to null the instant that window closes (see the
+  // scheduled expiry effect above), so "deadline !== null && now >= deadline" exactly
+  // brackets that window, nothing more.
+  const canSubmitNow = deadline !== null && now >= deadline;
 
   return (
     <>
@@ -211,7 +221,7 @@ export default function WalletWithdraw() {
 
         <div className="max-w-md space-y-2 mb-4">
           <p className={`text-xs mb-1.5 flex items-center gap-1 ${textMuted}`}>
-            <Timer size={12} /> Time limit — submit before it runs out or the request is cancelled
+            <Timer size={12} /> Time limit — wait it out, then submit the instant it ends
           </p>
           <div className="flex flex-wrap gap-1.5">
             {TIME_LIMIT_MINUTES.map((m) => (
@@ -231,10 +241,16 @@ export default function WalletWithdraw() {
               </button>
             ))}
           </div>
-          {remainingMs !== null && (
+          {remainingMs !== null && !canSubmitNow && (
             <p className="text-sm font-semibold text-amber-400 flex items-center gap-1.5">
               <Timer size={14} className="animate-pulse" />
-              Time remaining: {formatCountdown(remainingMs)}
+              Time remaining: {formatCountdown(remainingMs)} — submit unlocks when this hits 0:00
+            </p>
+          )}
+          {canSubmitNow && (
+            <p className="text-sm font-semibold text-green-400 flex items-center gap-1.5">
+              <Timer size={14} className="animate-pulse" />
+              Submit now — this closes in a moment!
             </p>
           )}
           {expired && (
@@ -278,8 +294,14 @@ export default function WalletWithdraw() {
 
           <button
             type="submit"
-            disabled={submitting || deadline === null}
-            title={deadline === null ? "Select a time limit above first" : undefined}
+            disabled={submitting || !canSubmitNow}
+            title={
+              deadline === null
+                ? "Select a time limit above first"
+                : !canSubmitNow
+                  ? "Wait for the time limit to finish before you can submit"
+                  : undefined
+            }
             className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold shadow-lg shadow-teal-600/30"
           >
             {submitting ? "Submitting..." : "Submit Withdrawal Request"}
