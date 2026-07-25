@@ -49,6 +49,35 @@ function formatCountdown(ms: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+// Persists the in-progress timer across a refresh (ProtectedRoute guarantees `user` is
+// resolved by the time this page renders, so it's safe to key off uid from the start).
+function timerStorageKey(uid: string) {
+  return `withdraw-timer-${uid}`;
+}
+
+interface StoredTimer {
+  deadline: number;
+  selectedMinutes: number;
+}
+
+function readStoredTimer(uid: string): StoredTimer | null {
+  try {
+    const raw = localStorage.getItem(timerStorageKey(uid));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredTimer>;
+    if (typeof parsed.deadline !== "number" || typeof parsed.selectedMinutes !== "number") return null;
+    return { deadline: parsed.deadline, selectedMinutes: parsed.selectedMinutes };
+  } catch {
+    return null;
+  }
+}
+
+// A stored timer whose grace window has already passed by the time the page reloads
+// counts as expired, same as if it had run out while the tab stayed open.
+function isStoredTimerStillLive(stored: StoredTimer): boolean {
+  return Date.now() < stored.deadline + SUBMIT_GRACE_MS;
+}
+
 export default function WalletWithdraw() {
   const { user, wallet } = useAuth();
   const navigate = useNavigate();
@@ -62,28 +91,55 @@ export default function WalletWithdraw() {
   const [success, setSuccess] = useState(false);
 
   // Picking a time limit reserves a submission window: the deadline is a fixed timestamp
-  // (not a countdown int) so it stays accurate regardless of tab-throttling; `, tick` just
-  // forces a re-render each second to redraw the remaining time.
-  const [deadline, setDeadline] = useState<number | null>(null);
-  const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
-  const [expired, setExpired] = useState(false);
+  // (not a countdown int) so it stays accurate regardless of tab-throttling. Lazily seeded
+  // from localStorage so an in-progress timer survives a page refresh instead of silently
+  // resetting to "no time limit selected."
+  const [deadline, setDeadline] = useState<number | null>(() => {
+    const stored = readStoredTimer(user!.uid);
+    return stored && isStoredTimerStillLive(stored) ? stored.deadline : null;
+  });
+  const [selectedMinutes, setSelectedMinutes] = useState<number | null>(() => {
+    const stored = readStoredTimer(user!.uid);
+    return stored && isStoredTimerStillLive(stored) ? stored.selectedMinutes : null;
+  });
+  const [expired, setExpired] = useState(() => {
+    const stored = readStoredTimer(user!.uid);
+    return Boolean(stored) && !isStoredTimerStillLive(stored!);
+  });
   const [, setTick] = useState(0);
+
+  // Keeps localStorage in sync with the live deadline — written on every new selection,
+  // removed the moment the attempt ends (expiry or successful submit) so a stale timer
+  // never resurrects on the next visit.
+  useEffect(() => {
+    const key = timerStorageKey(user!.uid);
+    if (deadline !== null && selectedMinutes !== null) {
+      localStorage.setItem(key, JSON.stringify({ deadline, selectedMinutes } satisfies StoredTimer));
+    } else {
+      localStorage.removeItem(key);
+    }
+  }, [user, deadline, selectedMinutes]);
 
   useEffect(() => {
     if (deadline === null) return;
-    const id = setInterval(() => {
-      // Submit stays enabled for one extra second right as the countdown hits zero (deadline
-      // only clears, disabling it, once that grace second has also passed) before the attempt
-      // is actually cancelled.
-      if (Date.now() >= deadline + SUBMIT_GRACE_MS) {
+
+    // A separate, precisely-scheduled one-shot timeout actually flips the state to expired
+    // — relying on a 1Hz polling interval to "catch" the right tick let drift shrink or
+    // erase the visible 1-second grace window. The interval below only redraws the display.
+    const expireTimeoutId = setTimeout(
+      () => {
         setExpired(true);
         setDeadline(null);
         setSelectedMinutes(null);
-      } else {
-        setTick((t) => t + 1);
-      }
-    }, 1000);
-    return () => clearInterval(id);
+      },
+      Math.max(0, deadline + SUBMIT_GRACE_MS - Date.now())
+    );
+    const tickIntervalId = setInterval(() => setTick((t) => t + 1), 250);
+
+    return () => {
+      clearTimeout(expireTimeoutId);
+      clearInterval(tickIntervalId);
+    };
   }, [deadline]);
 
   const selectTimeLimit = (minutes: number) => {
