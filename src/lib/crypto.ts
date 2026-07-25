@@ -127,20 +127,36 @@ export function subscribeToAllTickers(onUpdate: (ticks: MarketTick[]) => void, i
   let cancelled = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
+  // Reachability of Binance's various domains varies by network (some block api.binance.com,
+  // others block the newer data-api.binance.vision mirror) — try both rather than betting on
+  // one. fetchKlines already proves api.binance.com works for this app's chart data, so it
+  // goes first; data-api.binance.vision (used server-side in api/_lib/pricing.js to dodge
+  // cloud/datacenter IP blocks) is the fallback.
+  const ENDPOINTS = ["https://api.binance.com/api/v3/ticker/24hr", "https://data-api.binance.vision/api/v3/ticker/24hr"];
+
+  async function fetchTickers(): Promise<Record<string, unknown>[]> {
+    let lastError: unknown;
+    for (const url of ENDPOINTS) {
+      try {
+        const res = await fetch(url);
+        const data: unknown = await res.json();
+        if (!res.ok || !Array.isArray(data)) {
+          throw new Error(`Unexpected ticker response from ${url} (status ${res.status})`);
+        }
+        return data as Record<string, unknown>[];
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError;
+  }
+
   async function poll() {
     try {
-      // api.binance.com is geo-restricted in some regions (returns a JSON error object,
-      // not an array, for blocked requests) — data-api.binance.vision is Binance's own
-      // public read-only mirror, unaffected by that restriction (same fix already used
-      // server-side in api/_lib/pricing.js).
-      const res = await fetch("https://data-api.binance.vision/api/v3/ticker/24hr");
-      const data: unknown = await res.json();
+      const data = await fetchTickers();
       if (cancelled) return;
-      if (!res.ok || !Array.isArray(data)) {
-        throw new Error(`Unexpected ticker response (status ${res.status})`);
-      }
 
-      const ticks: MarketTick[] = (data as Record<string, unknown>[])
+      const ticks: MarketTick[] = data
         .filter((t) => typeof t.symbol === "string" && (t.symbol as string).endsWith("USDT"))
         .map((t) => {
           const symbol = t.symbol as string;
