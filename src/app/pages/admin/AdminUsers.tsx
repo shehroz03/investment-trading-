@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
-import { Users, ShieldCheck, Shield, Save, Wallet } from "lucide-react";
-import { useAuth } from "@/app/context/AuthContext";
+import { Users, Save } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
 import {
   getAllUsers,
-  setUserRole,
   setUserProfileStats,
   getAllWallets,
   setUserWalletBalance,
@@ -14,7 +12,6 @@ import {
   setUserLockedBalance,
   type WalletSummary,
 } from "@/lib/admin";
-import { AddMoneyModal } from "@/app/components/AddMoneyModal";
 import type { UserProfile } from "@/app/context/AuthContext";
 
 interface StatsEdit {
@@ -28,31 +25,18 @@ interface StatsEdit {
 }
 
 export default function AdminUsers() {
-  const { user: currentUser } = useAuth();
   const { textPrimary, textMuted, divider, theadBg, inputBg, hoverBg } = useThemeClasses();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [wallets, setWallets] = useState<Record<string, WalletSummary>>({});
   const [search, setSearch] = useState("");
-  const [busyUid, setBusyUid] = useState<string | null>(null);
   const [statsEdits, setStatsEdits] = useState<Record<string, StatsEdit>>({});
   const [savingStatsUid, setSavingStatsUid] = useState<string | null>(null);
-  const [addMoneyTarget, setAddMoneyTarget] = useState<UserProfile | null>(null);
 
   const load = () => Promise.all([getAllUsers().then(setUsers), getAllWallets().then(setWallets)]);
 
   useEffect(() => {
     load();
   }, []);
-
-  const toggleRole = async (u: UserProfile) => {
-    setBusyUid(u.uid);
-    try {
-      await setUserRole(u.uid, u.role === "admin" ? "user" : "admin");
-      await load();
-    } finally {
-      setBusyUid(null);
-    }
-  };
 
   const getStats = (u: UserProfile): StatsEdit =>
     statsEdits[u.uid] ?? {
@@ -251,36 +235,14 @@ export default function AdminUsers() {
                     </td>
                     <td className={`px-5 py-3 ${textMuted}`}>{toDate(u).toLocaleDateString()}</td>
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => setAddMoneyTarget(u)}
-                          title="Add money to this user's wallet"
-                          className={`p-1.5 rounded-lg ${hoverBg} text-teal-400`}
-                        >
-                          <Wallet size={14} />
-                        </button>
-                        <button
-                          onClick={() => saveStats(u)}
-                          disabled={savingStatsUid === u.uid}
-                          title="Save credit score / profile % / total money"
-                          className={`p-1.5 rounded-lg disabled:opacity-40 ${hoverBg} ${textMuted}`}
-                        >
-                          <Save size={14} />
-                        </button>
-                        <button
-                          onClick={() => toggleRole(u)}
-                          disabled={busyUid === u.uid || u.uid === currentUser?.uid}
-                          title={u.uid === currentUser?.uid ? "You can't change your own role" : undefined}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40 ${
-                            u.role === "admin"
-                              ? "bg-red-500/15 text-red-400 border border-red-500/30"
-                              : "bg-teal-500/15 text-teal-400 border border-teal-500/30"
-                          }`}
-                        >
-                          {u.role === "admin" ? <Shield size={13} /> : <ShieldCheck size={13} />}
-                          {busyUid === u.uid ? "..." : u.role === "admin" ? "Revoke Admin" : "Make Admin"}
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => saveStats(u)}
+                        disabled={savingStatsUid === u.uid}
+                        title="Save credit score / profile % / total money"
+                        className={`p-1.5 rounded-lg disabled:opacity-40 ${hoverBg} ${textMuted}`}
+                      >
+                        <Save size={14} />
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -289,15 +251,6 @@ export default function AdminUsers() {
           </table>
         </div>
       </Panel>
-
-      {addMoneyTarget && (
-        <AddMoneyModal
-          uid={addMoneyTarget.uid}
-          name={addMoneyTarget.name}
-          onClose={() => setAddMoneyTarget(null)}
-          onCredited={load}
-        />
-      )}
     </>
   );
 }
