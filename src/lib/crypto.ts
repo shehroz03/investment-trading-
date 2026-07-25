@@ -11,6 +11,10 @@ export const COIN_META: Record<string, { label: string; icon: string }> = {
   solusdt: { label: "Solana", icon: "S" },
   xrpusdt: { label: "XRP", icon: "X" },
   dogeusdt: { label: "Dogecoin", icon: "Ð" },
+  adausdt: { label: "Cardano", icon: "A" },
+  trxusdt: { label: "TRON", icon: "T" },
+  ltcusdt: { label: "Litecoin", icon: "Ł" },
+  linkusdt: { label: "Chainlink", icon: "L" },
 };
 
 const SYMBOLS = Object.keys(COIN_META);
