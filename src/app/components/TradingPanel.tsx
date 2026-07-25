@@ -309,12 +309,6 @@ export function TradingPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openPositions, symbol, interval]);
 
-  useEffect(() => {
-    if (!tradeResult) return;
-    const id = setTimeout(() => setTradeResult(null), 6000);
-    return () => clearTimeout(id);
-  }, [tradeResult]);
-
   const requestTrade = (direction: "long" | "short") => {
     const numericAmount = Number(amount);
     if (!numericAmount || numericAmount <= 0) {
@@ -430,23 +424,35 @@ export function TradingPanel() {
 
           {tradeResult && (
             <div
-              className={`mt-3 flex items-center justify-between p-3 rounded-xl border ${
-                tradeResult.pnl >= 0 ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/30"
-              }`}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+              onClick={() => setTradeResult(null)}
             >
-              <div>
-                <p className={`text-sm font-semibold ${tradeResult.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
-                  Trade {tradeResult.pnl >= 0 ? "Won" : "Lost"} — {tradeResult.trade.direction === "long" ? "Long" : "Short"}{" "}
-                  {tradeResult.trade.symbol.replace("USDT", "")}
+              <div
+                className={`w-full max-w-xs rounded-2xl border p-6 text-center ${cardBg}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className={`mx-auto mb-3 w-14 h-14 rounded-full flex items-center justify-center ${
+                    tradeResult.pnl >= 0 ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"
+                  }`}
+                >
+                  {tradeResult.pnl >= 0 ? <TrendingUp size={26} /> : <TrendingDown size={26} />}
+                </div>
+                <p className={`font-semibold ${tradeResult.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  Trade {tradeResult.pnl >= 0 ? "Won" : "Lost"}
                 </p>
-                <p className={`text-xs ${textMuted}`}>Stake: ${tradeResult.trade.amount.toFixed(2)}</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-lg font-bold ${tradeResult.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
+                <p className={`text-xs mt-1 ${textMuted}`}>
+                  {tradeResult.trade.direction === "long" ? "Long" : "Short"} {tradeResult.trade.symbol.replace("USDT", "")} — Stake $
+                  {tradeResult.trade.amount.toFixed(2)}
+                </p>
+                <p className={`text-2xl font-bold mt-3 ${tradeResult.pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {tradeResult.pnl >= 0 ? "+" : ""}${tradeResult.pnl.toFixed(2)}
                 </p>
-                <button onClick={() => setTradeResult(null)} className={`text-xs ${textMuted} hover:underline`}>
-                  Dismiss
+                <button
+                  onClick={() => setTradeResult(null)}
+                  className="w-full mt-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-sm font-semibold"
+                >
+                  OK
                 </button>
               </div>
             </div>
