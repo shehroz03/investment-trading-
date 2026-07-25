@@ -40,6 +40,7 @@ const METHOD_GROUPS: { label: string; methods: string[] }[] = [
 const METHODS = METHOD_GROUPS.flatMap((g) => g.methods);
 
 const TIME_LIMIT_MINUTES = [2, 4, 6, 8, 10] as const;
+const SUBMIT_GRACE_MS = 1000;
 
 function formatCountdown(ms: number) {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
@@ -71,7 +72,10 @@ export default function WalletWithdraw() {
   useEffect(() => {
     if (deadline === null) return;
     const id = setInterval(() => {
-      if (Date.now() >= deadline) {
+      // Submit stays enabled for one extra second right as the countdown hits zero (deadline
+      // only clears, disabling it, once that grace second has also passed) before the attempt
+      // is actually cancelled.
+      if (Date.now() >= deadline + SUBMIT_GRACE_MS) {
         setExpired(true);
         setDeadline(null);
         setSelectedMinutes(null);
