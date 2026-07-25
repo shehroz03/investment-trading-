@@ -129,11 +129,18 @@ export function subscribeToAllTickers(onUpdate: (ticks: MarketTick[]) => void, i
 
   async function poll() {
     try {
-      const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
-      const data: Record<string, unknown>[] = await res.json();
+      // api.binance.com is geo-restricted in some regions (returns a JSON error object,
+      // not an array, for blocked requests) — data-api.binance.vision is Binance's own
+      // public read-only mirror, unaffected by that restriction (same fix already used
+      // server-side in api/_lib/pricing.js).
+      const res = await fetch("https://data-api.binance.vision/api/v3/ticker/24hr");
+      const data: unknown = await res.json();
       if (cancelled) return;
+      if (!res.ok || !Array.isArray(data)) {
+        throw new Error(`Unexpected ticker response (status ${res.status})`);
+      }
 
-      const ticks: MarketTick[] = data
+      const ticks: MarketTick[] = (data as Record<string, unknown>[])
         .filter((t) => typeof t.symbol === "string" && (t.symbol as string).endsWith("USDT"))
         .map((t) => {
           const symbol = t.symbol as string;
@@ -146,8 +153,11 @@ export function subscribeToAllTickers(onUpdate: (ticks: MarketTick[]) => void, i
           };
         });
       onUpdate(ticks);
-    } catch {
-      // Transient network hiccup — the next poll will retry.
+    } catch (err) {
+      // Transient network hiccup — the next poll will retry. Logged (not silently
+      // swallowed) so a persistent failure is visible in devtools instead of just
+      // showing up as "the dropdown never fills in" with no clue why.
+      console.warn("subscribeToAllTickers: poll failed, will retry", err);
     } finally {
       if (!cancelled) timer = setTimeout(poll, intervalMs);
     }
