@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi } from "lightweight-charts";
+import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { TrendingUp, TrendingDown, Timer, AlertTriangle, Lock } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useThemeClasses } from "@/app/components/Panel";
@@ -12,8 +12,15 @@ import {
   type CryptoTick,
   type MarketTick,
 } from "@/lib/crypto";
-import { fetchKlines, subscribeToKline, fetchSimulatedKlines, subscribeToSimulatedKline, isSimulatedSymbol } from "@/lib/klines";
-import { openTrade, closeTrade, getOpenTrades, TRADE_DURATIONS, type Trade, type TradeDuration } from "@/lib/trading";
+import {
+  fetchKlines,
+  subscribeToKline,
+  fetchSimulatedKlines,
+  subscribeToSimulatedKline,
+  isSimulatedSymbol,
+  INTERVAL_SECONDS,
+} from "@/lib/klines";
+import { openTrade, closeTrade, subscribeToOpenTrades, TRADE_DURATIONS, type Trade, type TradeDuration } from "@/lib/trading";
 import { AllCoinsModal } from "@/app/components/AllCoinsModal";
 import { TradingRulesModal } from "@/app/components/TradingRulesModal";
 
@@ -49,6 +56,12 @@ export function TradingPanel() {
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const armedRef = useRef<Set<string>>(new Set());
+  // Admin-decided outcome on an open BTS/ETC position: while set, the real simulated
+  // price/kline feed for that symbol is suppressed (see the subscription effects below) and
+  // the chart instead animates to a target price consistent with the win/loss %, then holds
+  // there until the trade closes. Simulated instruments only — never real market symbols.
+  const priceOverrideRef = useRef<{ tradeId: string; symbol: string; targetPrice: number } | null>(null);
+  const overrideAnimatedRef = useRef<Set<string>>(new Set());
 
   const [symbol, setSymbol] = useState("BTCUSDT");
   const [interval, setInterval_] = useState("1m");
@@ -119,6 +132,9 @@ export function TradingPanel() {
 
     const subscribe = simulated ? subscribeToSimulatedKline : subscribeToKline;
     const unsubscribe = subscribe(symbol, interval, (candle) => {
+      // Real feed stays suppressed for a symbol under an active admin-outcome override —
+      // otherwise it would immediately overwrite the animated/held target price.
+      if (priceOverrideRef.current?.symbol === symbol) return;
       seriesRef.current?.update(candle);
     });
 
@@ -130,7 +146,15 @@ export function TradingPanel() {
 
   useEffect(() => {
     const unsubscribe = subscribeToCryptoTicker((next) => setTicks((prev) => ({ ...prev, ...next })));
-    const unsubscribeSimulated = subscribeToSimulatedTicker((next) => setTicks((prev) => ({ ...prev, ...next })));
+    const unsubscribeSimulated = subscribeToSimulatedTicker((next) => {
+      const overriddenSymbol = priceOverrideRef.current?.symbol.toLowerCase();
+      setTicks((prev) => {
+        if (!overriddenSymbol || !(overriddenSymbol in next)) return { ...prev, ...next };
+        // Don't let the real feed clobber the held override price for its symbol.
+        const { [overriddenSymbol]: _dropped, ...rest } = next;
+        return { ...prev, ...rest };
+      });
+    });
     return () => {
       unsubscribe();
       unsubscribeSimulated();
@@ -169,26 +193,23 @@ export function TradingPanel() {
     return () => clearInterval(id);
   }, []);
 
-  const loadPositions = () => {
-    if (!user) return;
-    getOpenTrades(user.uid).then(setOpenPositions);
-  };
-
+  // Live, not a one-time fetch: an admin setting adminOutcome or frozen on an already-loaded
+  // position (from AdminTrades) needs to reach this panel immediately, not just on the next
+  // manual reload — that's also what the price-override animation below keys off of.
   useEffect(() => {
-    loadPositions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!user) return;
+    const unsubscribe = subscribeToOpenTrades(user.uid, setOpenPositions);
+    return unsubscribe;
   }, [user]);
 
   const handleClose = async (tradeId: string) => {
     setClosingId(tradeId);
     try {
       await closeTrade(tradeId);
-      loadPositions();
     } catch (err) {
       // Most commonly hit if an admin froze this trade between it being loaded and the
-      // auto-close timer firing — the position stays open, so refresh to reflect that.
+      // auto-close timer firing — the live subscription already reflects that either way.
       setError(err instanceof Error ? err.message : "Failed to close trade.");
-      loadPositions();
     } finally {
       setClosingId((current) => (current === tradeId ? null : current));
       setSettlingUntil((prev) => {
@@ -221,6 +242,67 @@ export function TradingPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openPositions]);
 
+  // When an admin sets win/loss on an open BTS/ETC position, the chart for that symbol
+  // animates from its current price to a target consistent with the payout tiers (30%/40%,
+  // same as the actual money math in api/closeTrade.js), then holds there — purely a visual
+  // reveal on this app's own simulated instruments, never on real market symbols. Resumes
+  // normal simulated movement once the trade closes (priceOverrideRef clears below).
+  useEffect(() => {
+    const pos = openPositions.find(
+      (p) => isSimulatedSymbol(p.symbol) && (p.adminOutcome === "win" || p.adminOutcome === "loss")
+    );
+
+    if (!pos) {
+      priceOverrideRef.current = null;
+      return;
+    }
+
+    const profitPercent = pos.amount > 1000 ? 0.4 : 0.3;
+    const favorable = (pos.direction === "long") === (pos.adminOutcome === "win");
+    const targetPrice = pos.entryPrice * (1 + (favorable ? 1 : -1) * profitPercent);
+    priceOverrideRef.current = { tradeId: pos.id, symbol: pos.symbol, targetPrice };
+
+    if (pos.symbol !== symbol || !seriesRef.current) return;
+    const series = seriesRef.current;
+    const stepSec = INTERVAL_SECONDS[interval] ?? 60;
+    const bucketTime = Math.floor(Date.now() / (stepSec * 1000)) * stepSec;
+    const lowerSymbol = pos.symbol.toLowerCase();
+
+    if (overrideAnimatedRef.current.has(pos.id)) {
+      // Already played out once (e.g. the user switched coins and back) — snap straight to
+      // the held target instead of replaying the animation.
+      series.update({ time: bucketTime as Time, open: targetPrice, high: targetPrice, low: targetPrice, close: targetPrice });
+      return;
+    }
+
+    const startPrice = ticks[lowerSymbol]?.price ?? pos.entryPrice;
+    const STEPS = 20;
+    let step = 0;
+    const id = setInterval(() => {
+      step += 1;
+      const t = Math.min(1, step / STEPS);
+      const price = startPrice + (targetPrice - startPrice) * t;
+      series.update({
+        time: bucketTime as Time,
+        open: startPrice,
+        high: Math.max(startPrice, price),
+        low: Math.min(startPrice, price),
+        close: price,
+      });
+      setTicks((prev) => ({
+        ...prev,
+        [lowerSymbol]: { symbol: lowerSymbol, price, changePercent: ((price - startPrice) / startPrice) * 100 },
+      }));
+      if (t >= 1) {
+        clearInterval(id);
+        overrideAnimatedRef.current.add(pos.id);
+      }
+    }, 125);
+
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openPositions, symbol, interval]);
+
   const requestTrade = (direction: "long" | "short") => {
     const numericAmount = Number(amount);
     if (!numericAmount || numericAmount <= 0) {
@@ -251,7 +333,6 @@ export function TradingPanel() {
     try {
       await openTrade(symbol, direction, numericAmount, duration ?? undefined);
       setAmount("");
-      loadPositions();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open trade.");
     } finally {

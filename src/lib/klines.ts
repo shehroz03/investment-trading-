@@ -12,7 +12,7 @@ export function isSimulatedSymbol(symbol: string): boolean {
   return symbol.toLowerCase() in SIMULATED_RANGES;
 }
 
-const INTERVAL_SECONDS: Record<string, number> = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600 };
+export const INTERVAL_SECONDS: Record<string, number> = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600 };
 
 function buildSimulatedCandle(symbol: string, bucketStartMs: number, stepMs: number): Candle {
   const samples = 5;

@@ -1,4 +1,4 @@
-import { collection, getDocs, orderBy, query, where, type Timestamp } from "firebase/firestore";
+import { collection, getDocs, onSnapshot, orderBy, query, where, type Timestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 
 const TRADING_API_URL = import.meta.env.VITE_TRADING_API_URL;
@@ -88,6 +88,16 @@ export async function getOpenTrades(uid: string): Promise<Trade[]> {
     query(collection(db, "trades"), where("uid", "==", uid), where("status", "==", "open"))
   );
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Trade);
+}
+
+// Live version of getOpenTrades — needed so an admin setting adminOutcome/frozen on an
+// already-loaded open position (e.g. from AdminTrades) shows up immediately in the Trading
+// panel instead of only after the next manual refetch.
+export function subscribeToOpenTrades(uid: string, onUpdate: (trades: Trade[]) => void): () => void {
+  const q = query(collection(db, "trades"), where("uid", "==", uid), where("status", "==", "open"));
+  return onSnapshot(q, (snap) => {
+    onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Trade));
+  });
 }
 
 export async function getClosedTrades(uid: string): Promise<Trade[]> {
