@@ -159,7 +159,9 @@ export default function WalletWithdraw() {
                 key={m}
                 type="button"
                 onClick={() => selectTimeLimit(m)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                disabled={deadline !== null}
+                title={deadline !== null ? "Time limit is locked in until it expires or the request is submitted" : undefined}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border disabled:opacity-40 disabled:cursor-not-allowed ${
                   selectedMinutes === m
                     ? "bg-teal-500/20 text-teal-400 border-teal-500/30"
                     : `${hoverBg} ${textMuted} ${divider}`
