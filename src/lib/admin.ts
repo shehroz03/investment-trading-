@@ -159,7 +159,7 @@ export async function setUserWalletBalance(uid: string, newAvailable: number, pr
     creditAvailableInTransaction(tx, uid, walletRef, walletData, newAvailable);
     tx.set(doc(collection(db, "transactions")), {
       uid,
-      type: "admin_credit",
+      type: "admin_balance_adjustment",
       amount: delta,
       note: "Admin balance adjustment",
       createdAt: serverTimestamp(),
@@ -188,7 +188,7 @@ export async function setUserPendingOrderBalance(uid: string, newPendingOrder: n
     }
     tx.set(doc(collection(db, "transactions")), {
       uid,
-      type: "admin_credit",
+      type: "admin_pending_order_adjustment",
       amount: delta,
       note: "Admin Pending Order Balance adjustment",
       createdAt: serverTimestamp(),
@@ -209,7 +209,7 @@ export async function setUserLockedBalance(uid: string, newLocked: number, previ
   batch.update(doc(db, "wallets", uid), { locked: newLocked });
   batch.set(doc(collection(db, "transactions")), {
     uid,
-    type: "admin_credit",
+    type: "admin_locked_adjustment",
     amount: delta,
     note: "Admin Locked Balance adjustment",
     createdAt: serverTimestamp(),

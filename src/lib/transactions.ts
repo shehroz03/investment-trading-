@@ -7,6 +7,9 @@ export type TransactionType =
   | "roi"
   | "trade_pnl"
   | "admin_credit"
+  | "admin_balance_adjustment"
+  | "admin_pending_order_adjustment"
+  | "admin_locked_adjustment"
   | "order_lock"
   | "balance_unlock";
 

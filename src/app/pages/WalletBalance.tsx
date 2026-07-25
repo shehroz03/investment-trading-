@@ -15,6 +15,9 @@ const typeLabels: Record<string, string> = {
   roi: "Daily ROI",
   trade_pnl: "Trade P&L",
   admin_credit: "Admin Credit",
+  admin_balance_adjustment: "Balance Adjustment",
+  admin_pending_order_adjustment: "Order Balance Adjustment",
+  admin_locked_adjustment: "Locked Balance Adjustment",
   order_lock: "Balance Locked",
   balance_unlock: "Balance Unlocked",
 };
