@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { ArrowUpFromLine } from "lucide-react";
+import { ArrowUpFromLine, Timer } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -39,10 +39,19 @@ const METHOD_GROUPS: { label: string; methods: string[] }[] = [
 
 const METHODS = METHOD_GROUPS.flatMap((g) => g.methods);
 
+const TIME_LIMIT_MINUTES = [2, 4, 6, 8, 10] as const;
+
+function formatCountdown(ms: number) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 export default function WalletWithdraw() {
   const { user, wallet } = useAuth();
   const navigate = useNavigate();
-  const { textPrimary, textMuted, inputBg } = useThemeClasses();
+  const { textPrimary, textMuted, inputBg, hoverBg, divider } = useThemeClasses();
 
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState(METHODS[0]);
@@ -51,9 +60,42 @@ export default function WalletWithdraw() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Picking a time limit reserves a submission window: the deadline is a fixed timestamp
+  // (not a countdown int) so it stays accurate regardless of tab-throttling; `, tick` just
+  // forces a re-render each second to redraw the remaining time.
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [selectedMinutes, setSelectedMinutes] = useState<number | null>(null);
+  const [expired, setExpired] = useState(false);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (deadline === null) return;
+    const id = setInterval(() => {
+      if (Date.now() >= deadline) {
+        setExpired(true);
+        setDeadline(null);
+        setSelectedMinutes(null);
+      } else {
+        setTick((t) => t + 1);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  const selectTimeLimit = (minutes: number) => {
+    setExpired(false);
+    setError(null);
+    setSelectedMinutes(minutes);
+    setDeadline(Date.now() + minutes * 60 * 1000);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (deadline === null) {
+      setError("Select a time limit first.");
+      return;
+    }
     const numericAmount = Number(amount);
     if (!numericAmount || numericAmount <= 0) {
       setError("Enter a valid amount.");
@@ -72,6 +114,7 @@ export default function WalletWithdraw() {
     setSubmitting(true);
     try {
       await createWithdrawRequest({ uid: user.uid, amount: numericAmount, method, destination });
+      setDeadline(null);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit withdrawal request.");
@@ -95,6 +138,8 @@ export default function WalletWithdraw() {
     );
   }
 
+  const remainingMs = deadline !== null ? deadline - Date.now() : null;
+
   return (
     <>
       <PageHeader icon={<ArrowUpFromLine size={20} />} title="Withdraw" subtitle="Request a withdrawal from your available balance" />
@@ -103,6 +148,37 @@ export default function WalletWithdraw() {
         <p className={`text-sm mb-4 ${textMuted}`}>
           Available balance: <span className={`font-semibold ${textPrimary}`}>${(wallet?.available ?? 0).toFixed(2)}</span>
         </p>
+
+        <div className="max-w-md space-y-2 mb-4">
+          <p className={`text-xs mb-1.5 flex items-center gap-1 ${textMuted}`}>
+            <Timer size={12} /> Time limit — submit before it runs out or the request is cancelled
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {TIME_LIMIT_MINUTES.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => selectTimeLimit(m)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                  selectedMinutes === m
+                    ? "bg-teal-500/20 text-teal-400 border-teal-500/30"
+                    : `${hoverBg} ${textMuted} ${divider}`
+                }`}
+              >
+                {m}min
+              </button>
+            ))}
+          </div>
+          {remainingMs !== null && (
+            <p className="text-sm font-semibold text-amber-400 flex items-center gap-1.5">
+              <Timer size={14} className="animate-pulse" />
+              Time remaining: {formatCountdown(remainingMs)}
+            </p>
+          )}
+          {expired && (
+            <p className="text-xs text-red-400">Time limit reached — this withdrawal attempt was cancelled. Select a time limit to try again.</p>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
           <input
@@ -140,7 +216,8 @@ export default function WalletWithdraw() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || deadline === null}
+            title={deadline === null ? "Select a time limit above first" : undefined}
             className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold shadow-lg shadow-teal-600/30"
           >
             {submitting ? "Submitting..." : "Submit Withdrawal Request"}
