@@ -41,7 +41,13 @@ export default function WalletBalance() {
 
   const balances = [
     { label: "Available Balance", value: wallet.available, icon: Wallet, color: "text-teal-400 bg-teal-500/15" },
-    { label: "Pending Order Balance", value: wallet.pendingOrder, icon: Clock, color: "text-amber-400 bg-amber-500/15" },
+    {
+      label: "Pending Order Balance",
+      value: wallet.pendingOrder,
+      icon: Clock,
+      color: "text-amber-400 bg-amber-500/15",
+      subtitle: wallet.locked > 0 ? "Deposit here to recover your locked balance" : undefined,
+    },
     {
       label: "Locked Balance",
       value: wallet.locked,
@@ -97,7 +103,7 @@ export default function WalletBalance() {
             <p className={`text-sm font-semibold ${textPrimary}`}>
               Add {money(unlockRemaining)} more to your available balance to automatically unlock your locked balance.
             </p>
-            <p className={`text-xs ${textMuted}`}>Your locked balance will move into your Pending Order Balance once you reach this amount.</p>
+            <p className={`text-xs ${textMuted}`}>Your locked balance will move into your available balance once you reach this amount.</p>
           </div>
           <Link
             to="/wallet/deposit?purpose=wallet"

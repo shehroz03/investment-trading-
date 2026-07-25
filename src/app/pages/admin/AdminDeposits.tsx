@@ -60,7 +60,7 @@ export default function AdminDeposits() {
                     <td className={`px-5 py-3 font-mono text-xs ${textMuted}`}>{d.uid.slice(0, 8)}</td>
                     <td className={`px-5 py-3 font-semibold ${textPrimary}`}>${d.amount.toFixed(2)}</td>
                     <td className={`px-5 py-3 ${textMuted}`}>
-                      {d.purpose === "investment" ? `Investment (${d.plan})` : d.purpose === "order" ? "Order Balance" : "Wallet"}
+                      {d.purpose === "investment" ? `Investment (${d.plan})` : d.purpose === "order" ? "Recover Locked Balance" : "Wallet"}
                     </td>
                     <td className={`px-5 py-3 ${textMuted}`}>{d.method}</td>
                     <td className="px-5 py-3">

@@ -23,37 +23,13 @@ module.exports = withHandler(async (req, body) => {
   await db.runTransaction(async (tx) => {
     const walletSnap = await tx.get(walletRef);
     const wallet = walletSnap.data() ?? {};
-    const pendingOrder = wallet.pendingOrder ?? 0;
-    if (amount > pendingOrder) throw new HttpError(400, "Amount exceeds your Pending Order Balance.");
+    const available = wallet.available ?? 0;
+    if (amount > available) throw new HttpError(400, "Amount exceeds your available balance.");
 
-    const walletUpdate = {
-      pendingOrder: FieldValue.increment(-amount),
+    tx.update(walletRef, {
+      available: FieldValue.increment(-amount),
       locked: FieldValue.increment(amount),
-    };
-
-    // One-time rule: the first trade a user ever places also sweeps whatever is left in
-    // their Pending Order Balance into Locked, alongside this trade's own margin.
-    const remainder = pendingOrder - amount;
-    const isFirstTrade = !wallet.firstTradePlaced;
-    if (isFirstTrade) {
-      walletUpdate.firstTradePlaced = true;
-      if (remainder > 0) {
-        walletUpdate.pendingOrder = FieldValue.increment(-amount - remainder);
-        walletUpdate.locked = FieldValue.increment(amount + remainder);
-      }
-    }
-
-    tx.update(walletRef, walletUpdate);
-
-    if (isFirstTrade && remainder > 0) {
-      tx.set(db.collection("transactions").doc(), {
-        uid,
-        type: "order_lock",
-        amount: remainder,
-        note: "Balance locked after first trade",
-        createdAt: FieldValue.serverTimestamp(),
-      });
-    }
+    });
 
     tx.set(tradeRef, {
       uid,

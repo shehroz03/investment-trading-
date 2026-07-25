@@ -18,8 +18,8 @@ export type DepositPurpose = "wallet" | "investment" | "order";
 
 // Every code path that can raise a wallet's `available` balance (deposit approval, admin
 // "Add Money", admin "Total Money" override) must set the new value through this helper —
-// it's the only place that checks an admin-set unlockTarget and sweeps Locked into Pending
-// Order Balance when the new available balance reaches it. Call it from inside an already-open
+// it's the only place that checks an admin-set unlockTarget and sweeps Locked straight into
+// Available when the new available balance reaches it. Call it from inside an already-open
 // transaction so the credit and the unlock sweep stay atomic with whatever else that write does.
 // `unlockTargetOverride` lets a caller check against a target that isn't in `walletData` yet —
 // e.g. setUnlockTarget uses it to unlock immediately if the wallet already qualifies the
@@ -41,7 +41,7 @@ export function creditAvailableInTransaction(
   const walletUpdate: Record<string, unknown> = { ...extraWalletFields, available: newAvailable };
   if (shouldUnlock) {
     walletUpdate.locked = 0;
-    walletUpdate.pendingOrder = increment(currentLocked);
+    walletUpdate.available = newAvailable + currentLocked;
     walletUpdate.unlockTarget = null;
   } else if (unlockTargetOverride !== undefined) {
     walletUpdate.unlockTarget = unlockTargetOverride;
@@ -53,12 +53,49 @@ export function creditAvailableInTransaction(
       uid,
       type: "balance_unlock",
       amount: currentLocked,
-      note: "Balance unlocked — moved to Pending Order Balance",
+      note: "Balance unlocked — moved to Available Balance",
       createdAt: serverTimestamp(),
     });
   }
 
   return { unlockedAmount: shouldUnlock ? currentLocked : 0 };
+}
+
+// Pending Order Balance's only role now is recovering Locked Balance: depositing into it
+// (an approved "Fund Order Balance" deposit, or an admin setting it directly) converts an
+// equal dollar amount from Locked into Available, capped at whatever's actually locked — any
+// deposit beyond that just accumulates in Pending Order Balance with nothing left to recover.
+// It is no longer involved in placing trades (see api/openTrade.js / api/closeTrade.js, which
+// use Available directly).
+export function creditPendingOrderAndRecoverLocked(
+  tx: Transaction,
+  uid: string,
+  walletRef: DocumentReference,
+  walletData: Record<string, unknown>,
+  depositAmount: number,
+  extraWalletFields: Record<string, unknown> = {}
+): { recoveredAmount: number } {
+  const currentLocked = (walletData.locked as number) ?? 0;
+  const recoveredAmount = Math.min(depositAmount, Math.max(0, currentLocked));
+
+  const walletUpdate: Record<string, unknown> = { ...extraWalletFields, pendingOrder: increment(depositAmount) };
+  if (recoveredAmount > 0) {
+    walletUpdate.locked = increment(-recoveredAmount);
+    walletUpdate.available = increment(recoveredAmount);
+  }
+  tx.update(walletRef, walletUpdate);
+
+  if (recoveredAmount > 0) {
+    tx.set(doc(collection(db, "transactions")), {
+      uid,
+      type: "balance_unlock",
+      amount: recoveredAmount,
+      note: "Locked balance recovered via Pending Order Balance deposit",
+      createdAt: serverTimestamp(),
+    });
+  }
+
+  return { recoveredAmount };
 }
 
 interface CreateDepositParams {
@@ -140,7 +177,7 @@ export async function approveDeposit(depositId: string, reviewedBy: string) {
 
   if (deposit.purpose === "wallet") {
     // Reads the wallet so a top-up that pushes `available` past an admin-set unlockTarget
-    // can also sweep locked -> pendingOrder in the same transaction.
+    // can also sweep locked -> available in the same transaction.
     await runTransaction(db, async (tx) => {
       const walletSnap = await tx.get(walletRef);
       const walletData = walletSnap.data() ?? {};
@@ -161,6 +198,29 @@ export async function approveDeposit(depositId: string, reviewedBy: string) {
     return;
   }
 
+  if (deposit.purpose === "order") {
+    // Reads the wallet so this deposit can also recover Locked Balance in the same transaction.
+    await runTransaction(db, async (tx) => {
+      const walletSnap = await tx.get(walletRef);
+      const walletData = walletSnap.data() ?? {};
+
+      creditPendingOrderAndRecoverLocked(tx, deposit.uid, walletRef, walletData, deposit.amount, {
+        totalDeposits: increment(deposit.amount),
+      });
+      tx.update(depositRef, { status: "approved", reviewedAt: serverTimestamp(), reviewedBy });
+      tx.set(doc(collection(db, "transactions")), {
+        uid: deposit.uid,
+        type: "deposit",
+        amount: deposit.amount,
+        note: "Order balance funding",
+        createdAt: serverTimestamp(),
+      });
+    });
+    return;
+  }
+
+  // purpose === "investment"
+  const config = await getAppConfig();
   const batch = writeBatch(db);
 
   batch.update(depositRef, {
@@ -168,35 +228,25 @@ export async function approveDeposit(depositId: string, reviewedBy: string) {
     reviewedAt: serverTimestamp(),
     reviewedBy,
   });
+  batch.update(walletRef, {
+    totalDeposits: increment(deposit.amount),
+  });
 
-  if (deposit.purpose === "investment") {
-    const config = await getAppConfig();
-    batch.update(walletRef, {
-      totalDeposits: increment(deposit.amount),
-    });
-
-    const plan = deposit.plan ? config.plans[deposit.plan] : undefined;
-    batch.set(doc(collection(db, "investments")), {
-      uid: deposit.uid,
-      plan: deposit.plan,
-      amount: deposit.amount,
-      dailyRoiPercent: plan?.dailyRoiPercent ?? 0,
-      status: "active",
-      startDate: serverTimestamp(),
-    });
-  } else {
-    // purpose === "order"
-    batch.update(walletRef, {
-      pendingOrder: increment(deposit.amount),
-      totalDeposits: increment(deposit.amount),
-    });
-  }
+  const plan = deposit.plan ? config.plans[deposit.plan] : undefined;
+  batch.set(doc(collection(db, "investments")), {
+    uid: deposit.uid,
+    plan: deposit.plan,
+    amount: deposit.amount,
+    dailyRoiPercent: plan?.dailyRoiPercent ?? 0,
+    status: "active",
+    startDate: serverTimestamp(),
+  });
 
   batch.set(doc(collection(db, "transactions")), {
     uid: deposit.uid,
     type: "deposit",
     amount: deposit.amount,
-    note: deposit.purpose === "investment" ? `Investment (${deposit.plan})` : "Order balance funding",
+    note: `Investment (${deposit.plan})`,
     createdAt: serverTimestamp(),
   });
 

@@ -209,7 +209,7 @@ export default function WalletDeposit() {
                   purpose === p ? "bg-teal-500/15 text-teal-400 border-teal-500/30" : `${textMuted} ${divider}`
                 }`}
               >
-                {p === "wallet" ? "Wallet Top-Up" : p === "order" ? "Fund Order Balance" : "Investment Plan"}
+                {p === "wallet" ? "Wallet Top-Up" : p === "order" ? "Recover Locked Balance" : "Investment Plan"}
               </button>
             ))}
           </div>

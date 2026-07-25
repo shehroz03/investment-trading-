@@ -15,7 +15,7 @@ import {
 import { db } from "@/lib/firebase";
 import type { UserProfile } from "@/app/context/AuthContext";
 import type { Trade } from "@/lib/trading";
-import { creditAvailableInTransaction } from "@/lib/wallet";
+import { creditAvailableInTransaction, creditPendingOrderAndRecoverLocked } from "@/lib/wallet";
 
 export interface PendingDeposit {
   id: string;
@@ -169,23 +169,31 @@ export async function setUserWalletBalance(uid: string, newAvailable: number, pr
 
 // Directly overwrites the user's Pending Order Balance, for the inline "Pending Order
 // Balance" edit in the users table — an admin-controlled alternative to the user submitting
-// a "Fund Order Balance" deposit request. Pending Order Balance doesn't factor into the
-// unlockTarget check (that's keyed off `available`), so this is a plain field write, unlike
-// setUserWalletBalance. Still logs the resulting delta as a transaction so it stays auditable.
+// a "Fund Order Balance" deposit request. Raising it counts as a deposit and runs the same
+// creditPendingOrderAndRecoverLocked recovery (dollar-for-dollar out of Locked Balance);
+// lowering it is just a plain field write. Still logs the resulting delta as a transaction.
 export async function setUserPendingOrderBalance(uid: string, newPendingOrder: number, previousPendingOrder: number): Promise<void> {
   const delta = newPendingOrder - previousPendingOrder;
   if (delta === 0) return;
 
-  const batch = writeBatch(db);
-  batch.update(doc(db, "wallets", uid), { pendingOrder: newPendingOrder });
-  batch.set(doc(collection(db, "transactions")), {
-    uid,
-    type: "admin_credit",
-    amount: delta,
-    note: "Admin Pending Order Balance adjustment",
-    createdAt: serverTimestamp(),
+  const walletRef = doc(db, "wallets", uid);
+  await runTransaction(db, async (tx) => {
+    const walletSnap = await tx.get(walletRef);
+    const walletData = walletSnap.data() ?? {};
+
+    if (delta > 0) {
+      creditPendingOrderAndRecoverLocked(tx, uid, walletRef, walletData, delta);
+    } else {
+      tx.update(walletRef, { pendingOrder: newPendingOrder });
+    }
+    tx.set(doc(collection(db, "transactions")), {
+      uid,
+      type: "admin_credit",
+      amount: delta,
+      note: "Admin Pending Order Balance adjustment",
+      createdAt: serverTimestamp(),
+    });
   });
-  await batch.commit();
 }
 
 // Directly overwrites the user's Locked Balance, for the inline "Locked Balance" edit in the

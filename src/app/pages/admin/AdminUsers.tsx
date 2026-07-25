@@ -213,7 +213,7 @@ export default function AdminUsers() {
                           type="number"
                           min={0}
                           step="0.01"
-                          title="Funds the user can place trades with — an admin-set alternative to the 'Fund Order Balance' deposit request"
+                          title="Deposited here to recover Locked Balance dollar-for-dollar — an admin-set alternative to the 'Recover Locked Balance' deposit request"
                           value={getStats(u).pendingOrderBalance}
                           onChange={(e) => updateStatsEdit(u, "pendingOrderBalance", Number(e.target.value))}
                           className={`w-24 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
@@ -227,7 +227,7 @@ export default function AdminUsers() {
                           type="number"
                           min={0}
                           step="0.01"
-                          title="Balance held against this user's open/first trade"
+                          title="Balance held against this user's open trade, or manually locked"
                           value={getStats(u).lockedBalance}
                           onChange={(e) => updateStatsEdit(u, "lockedBalance", Number(e.target.value))}
                           className={`w-24 px-2 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}

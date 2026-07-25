@@ -40,26 +40,26 @@ module.exports = withHandler(async (req, body) => {
   const walletRef = db.collection("wallets").doc(uid);
   const isAdminWin = trade.adminOutcome === "win";
   const lostAmount = Math.max(0, -pnl);
-  // The trade's own margin releases from Locked on close. On a loss specifically, the lost
-  // amount is removed from the account (it doesn't return anywhere), and whatever is left
-  // over in Available Balance after that removal sweeps entirely into Locked Balance —
-  // Available always ends at $0 on a loss. E.g. available=2500, a 1500 loss: 2500-1500=1000
-  // sweeps to Locked, available becomes 0.
+  // Trades now open by deducting from and close by returning to Available Balance directly
+  // (Pending Order Balance is no longer trade-related — see creditPendingOrderAndRecoverLocked
+  // in src/lib/wallet.ts for its new role). On a loss, only the lost portion stays behind in
+  // Locked Balance; the rest of the margin releases back to Available as usual.
   const marginLockedDelta = -trade.amount;
   const proceeds = trade.amount + pnl; // non-lost portion of the stake, returned as usual
 
   await db.runTransaction(async (tx) => {
     const walletSnap = await tx.get(walletRef);
     const walletData = walletSnap.data() ?? {};
-    const walletUpdate = { locked: FieldValue.increment(marginLockedDelta) };
+    const walletUpdate = {
+      locked: FieldValue.increment(marginLockedDelta + lostAmount),
+      available: FieldValue.increment(proceeds),
+    };
     let unlockedAmount = 0;
-    let sweptToLocked = 0;
 
     if (isAdminWin) {
-      // A confirmed admin win pays out as real, withdrawable earnings instead of recycling
-      // back into the tradable Pending Order Balance. Like every other path that can raise
-      // `available` (see creditAvailableInTransaction in src/lib/wallet.ts), it must also
-      // check whether this credit reaches an admin-set unlockTarget and sweep accordingly.
+      // Like every other path that can raise `available` (see creditAvailableInTransaction
+      // in src/lib/wallet.ts), a confirmed admin win must also check whether this credit
+      // reaches an admin-set unlockTarget and sweep the rest of Locked accordingly.
       const currentAvailable = walletData.available ?? 0;
       const currentLocked = walletData.locked ?? 0;
       const unlockTarget = walletData.unlockTarget ?? null;
@@ -67,21 +67,11 @@ module.exports = withHandler(async (req, body) => {
       const lockedAfterRelease = currentLocked + marginLockedDelta;
       const shouldUnlock = unlockTarget != null && lockedAfterRelease > 0 && newAvailable >= unlockTarget;
 
-      walletUpdate.available = newAvailable;
       if (shouldUnlock) {
         walletUpdate.locked = 0;
-        walletUpdate.pendingOrder = FieldValue.increment(lockedAfterRelease);
+        walletUpdate.available = newAvailable + lockedAfterRelease;
         walletUpdate.unlockTarget = null;
         unlockedAmount = lockedAfterRelease;
-      }
-    } else {
-      walletUpdate.pendingOrder = FieldValue.increment(proceeds);
-
-      if (lostAmount > 0) {
-        const currentAvailable = walletData.available ?? 0;
-        sweptToLocked = Math.max(0, currentAvailable - lostAmount);
-        walletUpdate.available = 0;
-        walletUpdate.locked = FieldValue.increment(marginLockedDelta + sweptToLocked);
       }
     }
 
@@ -99,12 +89,12 @@ module.exports = withHandler(async (req, body) => {
       note: `${trade.direction === "long" ? "Long" : "Short"} ${trade.symbol} closed`,
       createdAt: FieldValue.serverTimestamp(),
     });
-    if (sweptToLocked > 0) {
+    if (lostAmount > 0) {
       tx.set(db.collection("transactions").doc(), {
         uid,
         type: "order_lock",
-        amount: sweptToLocked,
-        note: "Available balance locked after trade loss",
+        amount: lostAmount,
+        note: "Balance locked after trade loss",
         createdAt: FieldValue.serverTimestamp(),
       });
     }
@@ -113,7 +103,7 @@ module.exports = withHandler(async (req, body) => {
         uid,
         type: "balance_unlock",
         amount: unlockedAmount,
-        note: "Balance unlocked — moved to Pending Order Balance",
+        note: "Locked balance unlocked into Available Balance",
         createdAt: FieldValue.serverTimestamp(),
       });
     }

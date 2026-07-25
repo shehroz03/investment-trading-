@@ -193,8 +193,8 @@ export function TradingPanel() {
       setError("Enter a valid amount.");
       return;
     }
-    if (wallet && numericAmount > wallet.pendingOrder) {
-      setError("Amount exceeds your Pending Order Balance.");
+    if (wallet && numericAmount > wallet.available) {
+      setError("Amount exceeds your available balance.");
       return;
     }
     setError(null);
@@ -208,8 +208,8 @@ export function TradingPanel() {
       setError("Enter a valid amount.");
       return;
     }
-    if (wallet && numericAmount > wallet.pendingOrder) {
-      setError("Amount exceeds your Pending Order Balance.");
+    if (wallet && numericAmount > wallet.available) {
+      setError("Amount exceeds your available balance.");
       return;
     }
     setError(null);
@@ -293,7 +293,7 @@ export function TradingPanel() {
 
         <div className="lg:w-72 flex-shrink-0 space-y-3">
           <div>
-            <p className={`text-xs mb-1 ${textMuted}`}>Order Balance: ${(wallet?.pendingOrder ?? 0).toFixed(2)}</p>
+            <p className={`text-xs mb-1 ${textMuted}`}>Available: ${(wallet?.available ?? 0).toFixed(2)}</p>
             <input
               type="number"
               min="1"
