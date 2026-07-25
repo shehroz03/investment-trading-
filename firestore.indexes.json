@@ -33,6 +33,14 @@
       ]
     },
     {
+      "collectionGroup": "vip",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "trades",
       "queryScope": "COLLECTION",
       "fields": [

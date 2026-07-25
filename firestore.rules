@@ -20,14 +20,18 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
       allow create: if isOwner(uid);
-      // Self-service update covers two cases: editing your own display name, and
-      // submitKyc's own-profile mirror write (kyc.ts sets kycStatus alongside the actual
-      // kyc/{uid} doc) -- restricted to 'pending' only so a user can't self-approve/-reject.
+      // Self-service update covers three cases: editing your own display name, and
+      // submitKyc's / submitVipRequest's own-profile mirror writes (kycStatus / vipStatus
+      // alongside the actual kyc/{uid} or vip/{uid} doc) -- each restricted to 'pending' only
+      // so a user can't self-approve/-reject.
       allow update: if isAdmin() ||
         (isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])) ||
         (isOwner(uid) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kycStatus']) &&
-          request.resource.data.kycStatus == 'pending');
+          request.resource.data.kycStatus == 'pending') ||
+        (isOwner(uid) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vipStatus']) &&
+          request.resource.data.vipStatus == 'pending');
       allow delete: if false;
     }
 
@@ -57,12 +61,24 @@ service cloud.firestore {
 
     match /withdrawals/{id} {
       allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
+      // Withdrawals over $5,000 require an approved VIP request -- checked here too, not
+      // just in wallet.ts's createWithdrawRequest, so the cap can't be bypassed by a
+      // client that skips that helper.
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending' &&
+        (request.resource.data.amount <= 5000 ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.vipStatus == 'approved');
       allow update: if isAdmin() && resource.data.status == 'pending';
       allow delete: if false;
     }
 
     match /kyc/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isAdmin() ||
+        (isOwner(uid) && request.resource.data.status == 'pending' && (resource == null || resource.data.status != 'approved'));
+    }
+
+    // VIP activation unlocks withdrawals above $5,000 (see withdrawals/{id} above).
+    match /vip/{uid} {
       allow read: if isOwner(uid) || isAdmin();
       allow write: if isAdmin() ||
         (isOwner(uid) && request.resource.data.status == 'pending' && (resource == null || resource.data.status != 'approved'));

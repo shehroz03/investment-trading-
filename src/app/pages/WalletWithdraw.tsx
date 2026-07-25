@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { ArrowUpFromLine, Timer } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
-import { createWithdrawRequest } from "@/lib/wallet";
+import { createWithdrawRequest, NON_VIP_WITHDRAW_CAP } from "@/lib/wallet";
 
 const METHOD_GROUPS: { label: string; methods: string[] }[] = [
   {
@@ -79,7 +79,7 @@ function isStoredTimerStillLive(stored: StoredTimer): boolean {
 }
 
 export default function WalletWithdraw() {
-  const { user, wallet } = useAuth();
+  const { user, profile, wallet } = useAuth();
   const navigate = useNavigate();
   const { textPrimary, textMuted, inputBg, hoverBg, divider } = useThemeClasses();
 
@@ -169,6 +169,10 @@ export default function WalletWithdraw() {
       setError("Amount exceeds your available balance.");
       return;
     }
+    if (numericAmount > NON_VIP_WITHDRAW_CAP && profile?.vipStatus !== "approved") {
+      setError(`Withdrawals above $${NON_VIP_WITHDRAW_CAP.toLocaleString()} require an approved VIP activation — see the VIP Channel page.`);
+      return;
+    }
     if (!destination.trim()) {
       setError("Enter a withdrawal destination (wallet address / account number).");
       return;
@@ -215,9 +219,18 @@ export default function WalletWithdraw() {
       <PageHeader icon={<ArrowUpFromLine size={20} />} title="Withdraw" subtitle="Request a withdrawal from your available balance" />
 
       <Panel>
-        <p className={`text-sm mb-4 ${textMuted}`}>
+        <p className={`text-sm mb-1 ${textMuted}`}>
           Available balance: <span className={`font-semibold ${textPrimary}`}>${(wallet?.available ?? 0).toFixed(2)}</span>
         </p>
+        {profile?.vipStatus !== "approved" && (
+          <p className={`text-xs mb-4 ${textMuted}`}>
+            Withdrawals above ${NON_VIP_WITHDRAW_CAP.toLocaleString()} require{" "}
+            <Link to="/vip-channel" className="text-teal-400 hover:underline">
+              VIP activation
+            </Link>
+            .
+          </p>
+        )}
 
         <div className="max-w-md space-y-2 mb-4">
           <p className={`text-xs mb-1.5 flex items-center gap-1 ${textMuted}`}>

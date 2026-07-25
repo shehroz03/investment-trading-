@@ -27,6 +27,7 @@ export async function signUp({ name, username, email, password }: SignUpParams) 
     email,
     role: "user",
     kycStatus: "none",
+    vipStatus: "none",
     creditScore: 50,
     profileCompletionPercent: 0,
     createdAt: serverTimestamp(),

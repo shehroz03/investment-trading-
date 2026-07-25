@@ -16,6 +16,7 @@ export interface UserProfile {
   email: string;
   role: "user" | "admin";
   kycStatus: "none" | "pending" | "approved" | "rejected";
+  vipStatus: "none" | "pending" | "approved" | "rejected";
   creditScore: number;
   profileCompletionPercent: number;
   createdAt: Timestamp;

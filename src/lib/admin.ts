@@ -46,6 +46,12 @@ export interface PendingKyc {
   submittedAt: Timestamp | null;
 }
 
+export interface PendingVip {
+  uid: string;
+  note: string;
+  submittedAt: Timestamp | null;
+}
+
 export async function getPendingDeposits(): Promise<PendingDeposit[]> {
   const snap = await getDocs(
     query(collection(db, "deposits"), where("status", "==", "pending"), orderBy("createdAt", "asc"))
@@ -65,6 +71,13 @@ export async function getPendingKyc(): Promise<PendingKyc[]> {
     query(collection(db, "kyc"), where("status", "==", "pending"), orderBy("submittedAt", "asc"))
   );
   return snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as PendingKyc);
+}
+
+export async function getPendingVipRequests(): Promise<PendingVip[]> {
+  const snap = await getDocs(
+    query(collection(db, "vip"), where("status", "==", "pending"), orderBy("submittedAt", "asc"))
+  );
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }) as PendingVip);
 }
 
 export async function getAllUsers(): Promise<UserProfile[]> {

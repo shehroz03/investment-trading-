@@ -21,6 +21,7 @@ import {
   ArrowUpFromLine,
   ShieldQuestion,
   LineChart,
+  Crown,
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { logOut } from "@/lib/auth";
@@ -72,6 +73,12 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
         { label: "Monthly Reports", icon: <FileText size={15} />, to: "/reports/monthly" },
       ],
     },
+    {
+      label: "VIP Channel",
+      icon: <Crown size={18} />,
+      to: "/vip-channel",
+      badge: profile?.vipStatus && profile.vipStatus !== "none" ? profile.vipStatus : undefined,
+    },
     { label: "Settings", icon: <Settings size={18} />, to: "/settings" },
     ...(profile?.role === "admin"
       ? [
@@ -83,6 +90,7 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
               { label: "Deposits", icon: <ArrowDownToLine size={15} />, to: "/admin/deposits" },
               { label: "Withdrawals", icon: <ArrowUpFromLine size={15} />, to: "/admin/withdrawals" },
               { label: "KYC", icon: <ShieldQuestion size={15} />, to: "/admin/kyc" },
+              { label: "VIP Requests", icon: <Crown size={15} />, to: "/admin/vip-requests" },
               { label: "Users", icon: <Users size={15} />, to: "/admin/users" },
               { label: "Trades", icon: <LineChart size={15} />, to: "/admin/trades" },
               { label: "Content", icon: <Newspaper size={15} />, to: "/admin/content" },

@@ -136,14 +136,23 @@ interface CreateWithdrawParams {
   destination: string;
 }
 
+// Withdrawals above this need an approved VIP request (see src/lib/vip.ts) — also
+// enforced in firestore.rules so the cap can't be bypassed by skipping this helper.
+export const NON_VIP_WITHDRAW_CAP = 5000;
+
 export async function createWithdrawRequest({ uid, amount, method, destination }: CreateWithdrawParams) {
   const walletRef = doc(db, "wallets", uid);
+  const userRef = doc(db, "users", uid);
 
   await runTransaction(db, async (tx) => {
-    const walletSnap = await tx.get(walletRef);
+    const [walletSnap, userSnap] = await Promise.all([tx.get(walletRef), tx.get(userRef)]);
     const available = (walletSnap.data()?.available as number) ?? 0;
+    const vipStatus = (userSnap.data()?.vipStatus as string) ?? "none";
     if (amount <= 0) throw new Error("Amount must be greater than zero.");
     if (amount > available) throw new Error("Amount exceeds your available balance.");
+    if (amount > NON_VIP_WITHDRAW_CAP && vipStatus !== "approved") {
+      throw new Error(`Withdrawals above $${NON_VIP_WITHDRAW_CAP.toLocaleString()} require an approved VIP activation.`);
+    }
 
     tx.update(walletRef, {
       available: increment(-amount),
