@@ -144,10 +144,15 @@ export function TradingPanel() {
     return unsubscribe;
   }, []);
 
-  const sortedTickers = useMemo(
-    () => [...allTickers].sort((a, b) => b.quoteVolume - a.quoteVolume),
-    [allTickers]
-  );
+  const sortedTickers = useMemo(() => {
+    // Ethereum Classic (and possibly BitShares) also exist as real Binance markets, which
+    // would otherwise list "ETC"/"BTS" a second time alongside this app's own simulated
+    // versions of them — exclude any live ticker whose symbol collides with a simulated one.
+    const simulatedSymbols = new Set(Object.keys(SIMULATED_COIN_META).map((s) => s.toUpperCase()));
+    return [...allTickers]
+      .filter((t) => !simulatedSymbols.has(t.symbol))
+      .sort((a, b) => b.quoteVolume - a.quoteVolume);
+  }, [allTickers]);
   const knownSymbols = useMemo(
     () =>
       new Set([
@@ -259,6 +264,13 @@ export function TradingPanel() {
               onChange={(e) => setSymbol(e.target.value)}
               className={`px-3 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
             >
+              {/* This app's own simulated instruments go first — otherwise they'd be buried
+                  at the bottom of a 300+ live-market list and effectively invisible. */}
+              {Object.keys(SIMULATED_COIN_META).map((sym) => (
+                <option key={sym} value={sym.toUpperCase()}>
+                  {sym.replace(/usdt$/, "").toUpperCase()}
+                </option>
+              ))}
               {sortedTickers.length > 0
                 ? sortedTickers.map((t) => (
                     <option key={t.symbol} value={t.symbol}>
@@ -270,11 +282,6 @@ export function TradingPanel() {
                       {sym.replace(/usdt$/, "").toUpperCase()}
                     </option>
                   ))}
-              {Object.keys(SIMULATED_COIN_META).map((sym) => (
-                <option key={sym} value={sym.toUpperCase()}>
-                  {sym.replace(/usdt$/, "").toUpperCase()}
-                </option>
-              ))}
               {!knownSymbols.has(symbol) && <option value={symbol}>{symbol.replace(/USDT$/, "")}</option>}
             </select>
             <button
