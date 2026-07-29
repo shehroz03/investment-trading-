@@ -30,18 +30,25 @@ module.exports = withHandler(async (req, body) => {
 
   const available = wallet.available || 0;
   const locked = wallet.locked || 0;
+  const demo_available = wallet.demo_available || 0;
+  const demo_locked = wallet.demo_locked || 0;
+  
+  const isDemo = !!body.is_demo;
 
-  if (amount > available) {
-    throw new HttpError(400, "Amount exceeds your available balance.");
+  if (isDemo) {
+    if (amount > demo_available) throw new HttpError(400, "Amount exceeds your demo balance.");
+  } else {
+    if (amount > available) throw new HttpError(400, "Amount exceeds your available balance.");
   }
 
   // 2. Deduct amount from available and add to locked
+  const updateData = isDemo 
+    ? { demo_available: demo_available - amount, demo_locked: demo_locked + amount }
+    : { available: available - amount, locked: locked + amount };
+
   const { error: updateError } = await supabase
     .from("wallets")
-    .update({
-      available: available - amount,
-      locked: locked + amount
-    })
+    .update(updateData)
     .eq("user_id", uid);
 
   if (updateError) {
@@ -60,7 +67,8 @@ module.exports = withHandler(async (req, body) => {
       status: "open",
       "durationSeconds": durationSeconds ?? null,
       "expiresAt": expiresAt,
-      "openedAt": new Date().toISOString()
+      "openedAt": new Date().toISOString(),
+      is_demo: isDemo
     })
     .select()
     .single();

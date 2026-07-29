@@ -66,17 +66,6 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 mb-3">
           <div className={`flex-1 h-px ${darkMode ? "bg-white/6" : "bg-slate-200"}`}></div>
           <span className={`text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-slate-400" : "text-slate-500"} px-2`}>
-            Trade
-          </span>
-          <div className={`flex-1 h-px ${darkMode ? "bg-white/6" : "bg-slate-200"}`}></div>
-        </div>
-        <TradingPanel />
-      </section>
-
-      <section>
-        <div className="flex items-center gap-2 mb-3">
-          <div className={`flex-1 h-px ${darkMode ? "bg-white/6" : "bg-slate-200"}`}></div>
-          <span className={`text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-slate-400" : "text-slate-500"} px-2`}>
             Profit &amp; Loss
           </span>
           <div className={`flex-1 h-px ${darkMode ? "bg-white/6" : "bg-slate-200"}`}></div>

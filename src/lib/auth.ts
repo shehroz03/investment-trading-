@@ -49,6 +49,8 @@ export async function signUp({ name, username, email, password }: SignUpParams) 
     user_id: uid,
     available: 0,
     locked: 0,
+    demo_available: 1000,
+    demo_locked: 0,
     pending: 0,
     "pendingOrder": 0,
     "unlockTarget": null,

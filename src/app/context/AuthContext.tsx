@@ -24,6 +24,8 @@ export interface UserProfile {
 export interface Wallet {
   available: number;
   locked: number;
+  demo_available: number;
+  demo_locked: number;
   pending: number;
   pendingOrder: number;
   unlockTarget: number | null;
@@ -95,6 +97,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const mapWallet = (wData: any): Wallet => ({
       available: wData.available ?? 0,
       locked: wData.locked ?? 0,
+      demo_available: wData.demo_available ?? 0,
+      demo_locked: wData.demo_locked ?? 0,
       pending: wData.pending ?? 0,
       pendingOrder: wData.pendingOrder ?? 0,
       unlockTarget: wData.unlockTarget ?? null,
@@ -106,7 +110,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const fetchInitialData = async () => {
-      const { data: pData, error: pError } = await supabase.from('users').select('*').eq('id', user.id).single();
+      let pData = null;
+      
+      // Retry up to 4 times (2 seconds total) to allow auth.ts to finish inserting the profile
+      for (let i = 0; i < 4; i++) {
+        const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
+        if (data) {
+          pData = data;
+          break;
+        }
+        await new Promise(r => setTimeout(r, 500));
+      }
       
       // Agar database mein user ka record nahi milta (maslan DB wipe hone ke baad), 
       // toh purana session browser se nikalne ke liye force logout karein.

@@ -8,6 +8,7 @@ import { DashboardLayout } from "@/app/layouts/DashboardLayout";
 import Login from "@/app/pages/Login";
 import Signup from "@/app/pages/Signup";
 import Dashboard from "@/app/pages/Dashboard";
+import Trade from "@/app/pages/Trade";
 import Kyc from "@/app/pages/Kyc";
 import WalletBalance from "@/app/pages/WalletBalance";
 import WalletDeposit from "@/app/pages/WalletDeposit";
@@ -43,6 +44,8 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/trade" element={<Trade />} />
+                <Route path="/trade/:symbol" element={<Trade />} />
                 <Route path="/kyc" element={<Kyc />} />
                 <Route path="/wallet" element={<WalletBalance />} />
                 <Route path="/wallet/deposit" element={<WalletDeposit />} />

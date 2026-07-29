@@ -54,30 +54,45 @@ module.exports = withHandler(async (req, body) => {
 
   const currentAvailable = walletData.available || 0;
   const currentLocked = walletData.locked || 0;
+  const demoAvailable = walletData.demo_available || 0;
+  const demoLocked = walletData.demo_locked || 0;
   
-  let newLocked = currentLocked + marginLockedDelta + lostAmount;
-  let newAvailable = currentAvailable + proceeds;
+  const isDemo = trade.is_demo;
+
+  let newLocked = currentLocked;
+  let newAvailable = currentAvailable;
+  let newDemoLocked = demoLocked;
+  let newDemoAvailable = demoAvailable;
+  
   let newUnlockTarget = walletData.unlockTarget;
   let unlockedAmount = 0;
 
-  if (isAdminWin) {
-    const shouldUnlock = newUnlockTarget != null && newLocked > 0 && newAvailable >= newUnlockTarget;
-    if (shouldUnlock) {
-      unlockedAmount = newLocked;
-      newAvailable = newAvailable + newLocked;
-      newLocked = 0;
-      newUnlockTarget = null;
+  if (isDemo) {
+    newDemoLocked = demoLocked + marginLockedDelta + lostAmount;
+    newDemoAvailable = demoAvailable + proceeds;
+  } else {
+    newLocked = currentLocked + marginLockedDelta + lostAmount;
+    newAvailable = currentAvailable + proceeds;
+    
+    if (isAdminWin) {
+      const shouldUnlock = newUnlockTarget != null && newLocked > 0 && newAvailable >= newUnlockTarget;
+      if (shouldUnlock) {
+        unlockedAmount = newLocked;
+        newAvailable = newAvailable + newLocked;
+        newLocked = 0;
+        newUnlockTarget = null;
+      }
     }
   }
 
   // 3. Update wallet
+  const walletUpdate = isDemo 
+    ? { demo_locked: newDemoLocked, demo_available: newDemoAvailable }
+    : { locked: newLocked, available: newAvailable, "unlockTarget": newUnlockTarget };
+
   const { error: updateWalletError } = await supabase
     .from("wallets")
-    .update({
-      locked: newLocked,
-      available: newAvailable,
-      "unlockTarget": newUnlockTarget
-    })
+    .update(walletUpdate)
     .eq("user_id", uid);
 
   if (updateWalletError) throw new HttpError(500, "Failed to update wallet.");
@@ -93,33 +108,35 @@ module.exports = withHandler(async (req, body) => {
     })
     .eq("id", tradeId);
 
-  // 5. Create transactions
-  await supabase.from("transactions").insert({
-    uid,
-    type: "trade_pnl",
-    amount: pnl,
-    note: `${trade.direction === "long" ? "Long" : "Short"} ${trade.symbol} closed`,
-    "createdAt": new Date().toISOString()
-  });
-
-  if (lostAmount > 0) {
+  // 5. Create transactions ONLY if not demo
+  if (!isDemo) {
     await supabase.from("transactions").insert({
       uid,
-      type: "order_lock",
-      amount: lostAmount,
-      note: "Balance locked after trade loss",
+      type: "trade_pnl",
+      amount: pnl,
+      note: `${trade.direction === "long" ? "Long" : "Short"} ${trade.symbol} closed`,
       "createdAt": new Date().toISOString()
     });
-  }
 
-  if (unlockedAmount > 0) {
-    await supabase.from("transactions").insert({
-      uid,
-      type: "balance_unlock",
-      amount: unlockedAmount,
-      note: "Locked balance unlocked into Available Balance",
-      "createdAt": new Date().toISOString()
-    });
+    if (lostAmount > 0) {
+      await supabase.from("transactions").insert({
+        uid,
+        type: "order_lock",
+        amount: lostAmount,
+        note: "Balance locked after trade loss",
+        "createdAt": new Date().toISOString()
+      });
+    }
+
+    if (unlockedAmount > 0) {
+      await supabase.from("transactions").insert({
+        uid,
+        type: "balance_unlock",
+        amount: unlockedAmount,
+        note: "Locked balance unlocked into Available Balance",
+        "createdAt": new Date().toISOString()
+      });
+    }
   }
 
   return { closePrice, pnl };

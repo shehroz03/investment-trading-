@@ -50,6 +50,7 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
 
   const navItems: NavItem[] = [
     { label: "Dashboard", icon: <LayoutDashboard size={18} />, to: "/" },
+    { label: "Trade", icon: <LineChart size={18} />, to: "/trade" },
     {
       label: "KYC",
       icon: <ShieldCheck size={18} />,

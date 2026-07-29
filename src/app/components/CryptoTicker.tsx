@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { TrendingUp, TrendingDown, Radio, ChevronRight } from "lucide-react";
 import {
   subscribeToCryptoTicker,
@@ -56,7 +57,7 @@ export function CryptoTicker() {
           const positive = (tick?.changePercent ?? 0) >= 0;
 
           return (
-            <div key={symbol} className={`rounded-xl border p-3 ${cardBg}`}>
+            <Link to={`/trade/${symbol}`} key={symbol} className={`block rounded-xl border p-3 hover:border-teal-500/50 transition-colors cursor-pointer ${cardBg}`}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className={`text-xs font-semibold ${textMuted}`}>{meta.label}</span>
                 <span className={`text-sm font-bold ${textPrimary}`}>{meta.icon}</span>
@@ -75,7 +76,7 @@ export function CryptoTicker() {
               ) : (
                 <p className={`text-xs ${textMuted}`}>Loading...</p>
               )}
-            </div>
+            </Link>
           );
         })}
       </div>

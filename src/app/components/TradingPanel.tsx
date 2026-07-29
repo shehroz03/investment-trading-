@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { TrendingUp, TrendingDown, Timer, AlertTriangle, Lock } from "lucide-react";
+import { TrendingUp, TrendingDown, Timer, AlertTriangle, Lock, Edit2, Loader2 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useThemeClasses } from "@/app/components/Panel";
 import {
@@ -20,7 +20,7 @@ import {
   isSimulatedSymbol,
   INTERVAL_SECONDS,
 } from "@/lib/klines";
-import { openTrade, closeTrade, subscribeToOpenTrades, TRADE_DURATIONS, type Trade, type TradeDuration } from "@/lib/trading";
+import { openTrade, closeTrade, subscribeToOpenTrades, setDemoBalance, TRADE_DURATIONS, type Trade, type TradeDuration } from "@/lib/trading";
 import { AllCoinsModal } from "@/app/components/AllCoinsModal";
 import { TradingRulesModal } from "@/app/components/TradingRulesModal";
 
@@ -49,7 +49,7 @@ function formatRemaining(ms: number) {
   return `${minutes}m ${seconds}s`;
 }
 
-export function TradingPanel() {
+export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { initialSymbol?: string, onSymbolChange?: (sym: string) => void }) {
   const { user, wallet } = useAuth();
   const { textPrimary, textMuted, cardBg, inputBg, divider, hoverBg, darkMode } = useThemeClasses();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,7 +63,11 @@ export function TradingPanel() {
   const priceOverrideRef = useRef<{ tradeId: string; symbol: string; targetPrice: number } | null>(null);
   const overrideAnimatedRef = useRef<Set<string>>(new Set());
 
-  const [symbol, setSymbol] = useState("BTCUSDT");
+  const [symbol, setSymbol] = useState(initialSymbol);
+  
+  useEffect(() => {
+    setSymbol(initialSymbol);
+  }, [initialSymbol]);
   const [interval, setInterval_] = useState("1m");
   const [amount, setAmount] = useState("");
   const [duration, setDuration] = useState<TradeDuration | null>(null);
@@ -72,6 +76,7 @@ export function TradingPanel() {
   const [openPositions, setOpenPositions] = useState<Trade[]>([]);
   const [ticks, setTicks] = useState<Record<string, CryptoTick>>({});
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   const [, setTick] = useState(0);
   const [showCoinPicker, setShowCoinPicker] = useState(false);
   const [allTickers, setAllTickers] = useState<MarketTick[]>([]);
@@ -81,6 +86,12 @@ export function TradingPanel() {
   const [rulesModal, setRulesModal] = useState<"info" | "long" | "short" | null>(null);
   // Shown briefly right after a position closes — the trade's actual final P&L, not a preview.
   const [tradeResult, setTradeResult] = useState<{ trade: Trade; pnl: number } | null>(null);
+  
+  // Demo Balance Set state
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [demoInput, setDemoInput] = useState("1000");
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -315,8 +326,9 @@ export function TradingPanel() {
       setError("Enter a valid amount.");
       return;
     }
-    if (wallet && numericAmount > wallet.available) {
-      setError("Amount exceeds your available balance.");
+    const currentBalance = isDemo ? (wallet?.demo_available ?? 0) : (wallet?.available ?? 0);
+    if (wallet && numericAmount > currentBalance) {
+      setError(`Amount exceeds your ${isDemo ? 'demo' : 'available'} balance.`);
       return;
     }
     setError(null);
@@ -330,19 +342,38 @@ export function TradingPanel() {
       setError("Enter a valid amount.");
       return;
     }
-    if (wallet && numericAmount > wallet.available) {
-      setError("Amount exceeds your available balance.");
+    const currentBalance = isDemo ? (wallet?.demo_available ?? 0) : (wallet?.available ?? 0);
+    if (wallet && numericAmount > currentBalance) {
+      setError(`Amount exceeds your ${isDemo ? 'demo' : 'available'} balance.`);
       return;
     }
     setError(null);
     setSubmitting(direction);
     try {
-      await openTrade(symbol, direction, numericAmount, duration ?? undefined);
+      await openTrade(symbol, direction, numericAmount, duration ?? undefined, isDemo);
       setAmount("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open trade.");
     } finally {
       setSubmitting(null);
+    }
+  };
+
+  const handleSetDemo = async () => {
+    const val = Number(demoInput);
+    if (isNaN(val) || val < 1 || val > 500000) {
+      setDemoError("Amount must be between $1 and $500,000.");
+      return;
+    }
+    setDemoError(null);
+    setDemoLoading(true);
+    try {
+      await setDemoBalance(val);
+      setShowDemoModal(false);
+    } catch (err) {
+      setDemoError(err instanceof Error ? err.message : "Failed to set demo balance.");
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -353,7 +384,11 @@ export function TradingPanel() {
           <div className="flex items-center flex-wrap gap-2 mb-3">
             <select
               value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
+              onChange={(e) => {
+                const sym = e.target.value;
+                setSymbol(sym);
+                onSymbolChange?.(sym);
+              }}
               className={`px-3 py-1.5 rounded-lg border text-sm outline-none ${inputBg}`}
             >
               {/* This app's own simulated instruments go first — otherwise they'd be buried
@@ -387,6 +422,7 @@ export function TradingPanel() {
                 onClose={() => setShowCoinPicker(false)}
                 onSelect={(sym) => {
                   setSymbol(sym);
+                  onSymbolChange?.(sym);
                   setShowCoinPicker(false);
                 }}
               />
@@ -461,7 +497,22 @@ export function TradingPanel() {
 
         <div className="lg:w-72 flex-shrink-0 space-y-3">
           <div>
-            <p className={`text-xs mb-1 ${textMuted}`}>Available: ${(wallet?.available ?? 0).toFixed(2)}</p>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className={`text-xs flex items-center gap-1.5 ${textMuted}`}>
+                {isDemo ? "Demo" : "Available"}: ${(isDemo ? (wallet?.demo_available ?? 0) : (wallet?.available ?? 0)).toFixed(2)}
+                {isDemo && (
+                  <button onClick={() => setShowDemoModal(true)} className={`p-1 rounded-md hover:bg-sky-500/10 text-sky-400 transition-colors`}>
+                    <Edit2 size={12} />
+                  </button>
+                )}
+              </p>
+              <button
+                onClick={() => setIsDemo(!isDemo)}
+                className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${isDemo ? 'border-sky-500/30 text-sky-400 bg-sky-500/10 hover:bg-sky-500/20' : 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'}`}
+              >
+                {isDemo ? "Switch to Real" : "Switch to Demo"}
+              </button>
+            </div>
             <input
               type="number"
               min="1"
@@ -538,8 +589,9 @@ export function TradingPanel() {
                   return (
                     <div key={pos.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${divider}`}>
                       <div>
-                        <p className={`text-xs font-semibold ${textPrimary}`}>
+                        <p className={`text-xs font-semibold flex items-center gap-2 ${textPrimary}`}>
                           {pos.direction === "long" ? "Long" : "Short"} {pos.symbol.replace("USDT", "")} — ${pos.amount}
+                          {pos.is_demo && <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 uppercase tracking-wider">Demo</span>}
                         </p>
                         <p className={`text-xs ${livePnl === null ? textMuted : positive ? "text-green-400" : "text-red-400"}`}>
                           {livePnl === null ? "—" : `${positive ? "+" : ""}$${livePnl.toFixed(2)}`}
@@ -577,6 +629,42 @@ export function TradingPanel() {
           </div>
         </div>
       </div>
+      
+      {showDemoModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setShowDemoModal(false)}>
+          <div className={`w-full max-w-sm rounded-2xl border p-5 ${cardBg}`} onClick={(e) => e.stopPropagation()}>
+            <h3 className={`font-semibold mb-2 ${textPrimary}`}>Set Demo Balance</h3>
+            <p className={`text-xs mb-4 ${textMuted}`}>
+              Set your demo balance to practice trading. Limit is $1 to $500,000.
+            </p>
+            <input
+              type="number"
+              min="1"
+              max="500000"
+              value={demoInput}
+              onChange={(e) => setDemoInput(e.target.value)}
+              className={`w-full px-3 py-2.5 mb-2 rounded-xl border text-sm outline-none focus:border-sky-500 ${inputBg}`}
+              placeholder="Amount (e.g. 1000)"
+            />
+            {demoError && <p className="text-xs text-red-400 mb-3">{demoError}</p>}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setShowDemoModal(false)}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${hoverBg} ${textPrimary}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSetDemo}
+                disabled={demoLoading}
+                className="flex-1 py-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+              >
+                {demoLoading ? <Loader2 size={16} className="animate-spin" /> : "Set Balance"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
