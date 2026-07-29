@@ -52,7 +52,7 @@ class _WebViewAppState extends State<WebViewApp> {
         );
     }
     
-    controller.loadRequest(Uri.parse(kIsWeb ? 'http://localhost:5174' : 'http://10.0.2.2:5174'));
+    controller.loadRequest(Uri.parse('https://investment-mlm-referral-dashboard.vercel.app'));
   }
 
   @override

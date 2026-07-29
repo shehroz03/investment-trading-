@@ -28,6 +28,8 @@ import AdminContent from "@/app/pages/admin/AdminContent";
 import AdminTrades from "@/app/pages/admin/AdminTrades";
 import VipChannel from "@/app/pages/VipChannel";
 import AdminVip from "@/app/pages/admin/AdminVip";
+import Support from "@/app/pages/Support";
+import AdminSupport from "@/app/pages/admin/AdminSupport";
 
 export default function App() {
   return (
@@ -52,6 +54,7 @@ export default function App() {
                 <Route path="/news" element={<News />} />
                 <Route path="/guides" element={<Guides />} />
                 <Route path="/vip-channel" element={<VipChannel />} />
+                <Route path="/support" element={<Support />} />
 
                 <Route element={<AdminRoute />}>
                   <Route path="/admin" element={<AdminHome />} />
@@ -63,6 +66,7 @@ export default function App() {
                   <Route path="/admin/content" element={<AdminContent />} />
                   <Route path="/admin/trades" element={<AdminTrades />} />
                   <Route path="/admin/vip-requests" element={<AdminVip />} />
+                  <Route path="/admin/support" element={<AdminSupport />} />
                 </Route>
               </Route>
             </Route>

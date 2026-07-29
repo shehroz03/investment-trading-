@@ -91,6 +91,7 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
               { label: "Withdrawals", icon: <ArrowUpFromLine size={15} />, to: "/admin/withdrawals" },
               { label: "KYC", icon: <ShieldQuestion size={15} />, to: "/admin/kyc" },
               { label: "VIP Requests", icon: <Crown size={15} />, to: "/admin/vip-requests" },
+              { label: "Support Tickets", icon: <MessageCircle size={15} />, to: "/admin/support" },
               { label: "Users", icon: <Users size={15} />, to: "/admin/users" },
               { label: "Trades", icon: <LineChart size={15} />, to: "/admin/trades" },
               { label: "Content", icon: <Newspaper size={15} />, to: "/admin/content" },
@@ -245,6 +246,11 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
             <span className="font-medium">Live Support 24/7</span>
             <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-500 font-medium">Online</span>
           </a>
+
+          <Link to="/support" onClick={onClose} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${hoverBg} ${textMuted}`}>
+            <MessageCircle size={18} className="text-emerald-500" />
+            <span className="font-medium">Support Tickets</span>
+          </Link>
 
           <Link to="/social-banners" onClick={onClose} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${hoverBg} ${textMuted}`}>
             <Image size={18} className="text-purple-500" />
