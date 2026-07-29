@@ -24,7 +24,7 @@ export default function VipChannel() {
 
   useEffect(() => {
     if (!user) return;
-    getVipRecord(user.uid).then(setRecord);
+    getVipRecord(user.id).then(setRecord);
   }, [user]);
 
   const status = profile?.vipStatus ?? "none";
@@ -37,8 +37,8 @@ export default function VipChannel() {
     setError(null);
     setSubmitting(true);
     try {
-      await submitVipRequest(user.uid, note);
-      setRecord(await getVipRecord(user.uid));
+      await submitVipRequest(user.id, note);
+      setRecord(await getVipRecord(user.id));
       setNote("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit VIP activation request.");

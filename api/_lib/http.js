@@ -21,8 +21,9 @@ async function requireUid(req) {
   const match = header.match(/^Bearer (.+)$/);
   if (!match) throw new HttpError(401, "Sign in required.");
   try {
-    const decoded = await admin.auth().verifyIdToken(match[1]);
-    return decoded.uid;
+    const { data, error } = await admin.auth.getUser(match[1]);
+    if (error || !data.user) throw new HttpError(401, "Sign in required.");
+    return data.user.id;
   } catch {
     throw new HttpError(401, "Sign in required.");
   }

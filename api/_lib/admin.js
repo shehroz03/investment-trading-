@@ -1,23 +1,28 @@
-const admin = require("firebase-admin");
+const { createClient } = require("@supabase/supabase-js");
 
-let initialized = false;
+let supabaseAdmin = null;
 
-// Lazy, on-demand init — never runs at module-load time, so a missing/bad
-// service account key throws only once we're inside withHandler's try/catch
-// (after CORS headers are already set), instead of crashing the whole
-// function before it can respond to the browser's CORS preflight.
 function ensureInitialized() {
-  if (initialized) return;
-  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!key) throw new Error("Server misconfigured: FIREBASE_SERVICE_ACCOUNT_KEY is not set.");
-  let serviceAccount;
-  try {
-    serviceAccount = JSON.parse(key);
-  } catch {
-    throw new Error("Server misconfigured: FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON.");
+  if (supabaseAdmin) return;
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Server misconfigured: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set.");
   }
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-  initialized = true;
+  
+  supabaseAdmin = createClient(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
 }
 
-module.exports = { admin, ensureInitialized };
+// Exporting a getter so callers always get the initialized instance
+module.exports = {
+  get admin() {
+    if (!supabaseAdmin) throw new Error("Admin not initialized. Call ensureInitialized() first.");
+    return supabaseAdmin;
+  },
+  ensureInitialized
+};

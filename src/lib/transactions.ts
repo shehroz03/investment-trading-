@@ -1,5 +1,4 @@
-import { collection, getDocs, orderBy, query, where, type Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 
 export type TransactionType =
   | "deposit"
@@ -19,14 +18,17 @@ export interface TransactionRecord {
   type: TransactionType;
   amount: number;
   note: string;
-  createdAt: Timestamp | null;
+  createdAt: string | null;
 }
 
 export async function getUserTransactions(uid: string): Promise<TransactionRecord[]> {
-  const snap = await getDocs(
-    query(collection(db, "transactions"), where("uid", "==", uid), orderBy("createdAt", "desc"))
-  );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as TransactionRecord);
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('uid', uid)
+    .order('createdAt', { ascending: false });
+  if (error) throw error;
+  return data as TransactionRecord[];
 }
 
 export interface PeriodGroup {
@@ -40,8 +42,10 @@ export function groupByPeriod(rows: TransactionRecord[], granularity: "day" | "m
   const groups = new Map<string, PeriodGroup>();
 
   for (const row of rows) {
-    const date = row.createdAt?.toDate();
-    if (!date) continue;
+    if (!row.createdAt) continue;
+    const date = new Date(row.createdAt);
+    if (isNaN(date.getTime())) continue;
+
     const key =
       granularity === "day"
         ? date.toISOString().slice(0, 10)
@@ -59,12 +63,15 @@ export function groupByPeriod(rows: TransactionRecord[], granularity: "day" | "m
 
 export function exportTransactionsToCsv(rows: TransactionRecord[], filename: string) {
   const header = ["Date", "Type", "Amount", "Note"];
-  const lines = rows.map((r) => [
-    r.createdAt ? r.createdAt.toDate().toISOString() : "",
-    r.type,
-    r.amount.toFixed(2),
-    r.note.replace(/,/g, ";"),
-  ]);
+  const lines = rows.map((r) => {
+    const dateStr = r.createdAt ? new Date(r.createdAt).toISOString() : "";
+    return [
+      dateStr,
+      r.type,
+      r.amount.toFixed(2),
+      r.note.replace(/,/g, ";"),
+    ];
+  });
   const csv = [header, ...lines].map((line) => line.join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

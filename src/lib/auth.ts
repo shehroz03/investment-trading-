@@ -1,11 +1,4 @@
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  updateProfile,
-} from "firebase/auth";
-import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 
 interface SignUpParams {
   name: string;
@@ -15,47 +8,75 @@ interface SignUpParams {
 }
 
 export async function signUp({ name, username, email, password }: SignUpParams) {
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
-  await updateProfile(credential.user, { displayName: name });
+  // 1. Create the user in Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name,
+        username,
+      }
+    }
+  });
 
-  const uid = credential.user.uid;
-  const batch = writeBatch(db);
+  if (authError) throw authError;
+  if (!authData.user) throw new Error("User creation failed.");
 
-  batch.set(doc(db, "users", uid), {
+  const uid = authData.user.id;
+
+  // 2. Insert into public.users table
+  const { error: userError } = await supabase.from('users').insert({
+    id: uid,
     name,
     username,
     email,
     role: "user",
-    kycStatus: "none",
-    vipStatus: "none",
-    creditScore: 50,
-    profileCompletionPercent: 0,
-    createdAt: serverTimestamp(),
+    kyc_status: "none",
+    vip_status: "none",
+    credit_score: 50,
+    profile_completion_percent: 0,
+    // createdAt is usually handled by the database default (now()) in Supabase
   });
 
-  batch.set(doc(db, "wallets", uid), {
+  if (userError) {
+    console.error("Error creating user record:", userError);
+    // Ideally, we'd want to rollback auth user creation or handle it via a database trigger instead
+  }
+
+  // 3. Insert into public.wallets table
+  const { error: walletError } = await supabase.from('wallets').insert({
+    user_id: uid,
     available: 0,
     locked: 0,
     pending: 0,
-    pendingOrder: 0,
-    unlockTarget: null,
-    firstTradePlaced: false,
-    lastInterestAt: serverTimestamp(),
-    totalDeposits: 0,
-    totalWithdrawals: 0,
-    totalEarnings: 0,
+    "pendingOrder": 0,
+    "unlockTarget": null,
+    "firstTradePlaced": false,
+    "totalDeposits": 0,
+    "totalWithdrawals": 0,
+    "totalEarnings": 0,
+    // lastInterestAt usually handled by db default
   });
 
-  await batch.commit();
+  if (walletError) {
+    console.error("Error creating wallet record:", walletError);
+  }
 
-  return credential.user;
+  return authData.user;
 }
 
 export async function logIn(email: string, password: string) {
-  const credential = await signInWithEmailAndPassword(auth, email, password);
-  return credential.user;
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) throw error;
+  return data.user;
 }
 
 export async function logOut() {
-  await signOut(auth);
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
 }

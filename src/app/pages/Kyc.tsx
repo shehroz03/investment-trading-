@@ -29,7 +29,7 @@ export default function Kyc() {
 
   useEffect(() => {
     if (!user) return;
-    getKyc(user.uid).then(setRecord);
+    getKyc(user.id).then(setRecord);
   }, [user]);
 
   const status = profile?.kycStatus ?? "none";
@@ -45,8 +45,8 @@ export default function Kyc() {
     setError(null);
     setSubmitting(true);
     try {
-      await submitKyc(user.uid, { fullName, dateOfBirth, address, country }, { idProof, addressProof, selfie });
-      setRecord(await getKyc(user.uid));
+      await submitKyc(user.id, { fullName, dateOfBirth, address, country }, { idProof, addressProof, selfie });
+      setRecord(await getKyc(user.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit KYC.");
     } finally {

@@ -1,36 +1,42 @@
-import { doc, getDoc, serverTimestamp, writeBatch, type Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 
 export type VipStatus = "none" | "pending" | "approved" | "rejected";
 
 export interface VipRecord {
   note: string;
   status: "pending" | "approved" | "rejected";
-  submittedAt: Timestamp | null;
-  reviewedAt?: Timestamp | null;
+  submittedAt: string | null;
+  reviewedAt?: string | null;
 }
 
-// Approved VIP status raises the $5,000 per-withdrawal cap enforced in
-// createWithdrawRequest (src/lib/wallet.ts) and mirrored in firestore.rules.
 export async function submitVipRequest(uid: string, note: string): Promise<void> {
-  const batch = writeBatch(db);
-  batch.set(doc(db, "vip", uid), {
+  const { error: vipError } = await supabase.from('vip').insert({
+    uid,
     note,
     status: "pending",
-    submittedAt: serverTimestamp(),
   });
-  batch.update(doc(db, "users", uid), { vipStatus: "pending" });
-  await batch.commit();
+  if (vipError) throw vipError;
+
+  const { error: userError } = await supabase.from('users').update({ vip_status: "pending" }).eq('id', uid);
+  if (userError) throw userError;
 }
 
 export async function getVipRecord(uid: string): Promise<VipRecord | null> {
-  const snap = await getDoc(doc(db, "vip", uid));
-  return snap.exists() ? (snap.data() as VipRecord) : null;
+  const { data, error } = await supabase.from('vip').select('*').eq('uid', uid).single();
+  if (error || !data) return null;
+  
+  return {
+    note: data.note,
+    status: data.status,
+    submittedAt: data.submittedAt,
+    reviewedAt: data.reviewedAt,
+  } as VipRecord;
 }
 
 export async function reviewVipRequest(uid: string, status: "approved" | "rejected"): Promise<void> {
-  const batch = writeBatch(db);
-  batch.update(doc(db, "vip", uid), { status, reviewedAt: serverTimestamp() });
-  batch.update(doc(db, "users", uid), { vipStatus: status });
-  await batch.commit();
+  const { error: vipError } = await supabase.from('vip').update({ status }).eq('uid', uid);
+  if (vipError) throw vipError;
+
+  const { error: userError } = await supabase.from('users').update({ vip_status: status }).eq('id', uid);
+  if (userError) throw userError;
 }

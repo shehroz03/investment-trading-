@@ -22,8 +22,8 @@ export default function AdminWithdrawals() {
     if (!user) return;
     setBusyId(id);
     try {
-      if (action === "approve") await approveWithdrawal(id, user.uid);
-      else await rejectWithdrawal(id, user.uid);
+      if (action === "approve") await approveWithdrawal(id, user.id);
+      else await rejectWithdrawal(id, user.id);
       await load();
     } finally {
       setBusyId(null);

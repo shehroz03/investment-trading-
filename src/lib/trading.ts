@@ -1,12 +1,11 @@
-import { collection, getDocs, onSnapshot, orderBy, query, where, type Timestamp } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 
 const TRADING_API_URL = import.meta.env.VITE_TRADING_API_URL;
 
 // Shared by every module that calls one of this project's Vercel serverless functions
-// (trading, admin actions, etc.) — not trading-specific despite the name's history.
 export async function callTradingApi<T>(endpoint: string, body: unknown): Promise<T> {
-  const idToken = await auth.currentUser?.getIdToken();
+  const { data: { session } } = await supabase.auth.getSession();
+  const idToken = session?.access_token;
   if (!idToken) throw new Error("Sign in required.");
 
   const res = await fetch(`${TRADING_API_URL}/${endpoint}`, {
@@ -37,15 +36,15 @@ export interface Trade {
   closePrice?: number;
   pnl?: number;
   durationSeconds?: TradeDuration | null;
-  expiresAt?: Timestamp | null;
-  openedAt: Timestamp | null;
-  closedAt?: Timestamp | null;
+  expiresAt?: string | null;
+  openedAt: string | null;
+  closedAt?: string | null;
   adminOutcome?: TradeOutcome | null;
   adminOutcomeBy?: string;
-  adminOutcomeAt?: Timestamp | null;
+  adminOutcomeAt?: string | null;
   frozen?: boolean;
   frozenBy?: string;
-  frozenAt?: Timestamp | null;
+  frozenAt?: string | null;
 }
 
 export async function openTrade(
@@ -70,39 +69,52 @@ export async function setTradeOutcome(tradeId: string, outcome: TradeOutcome) {
   return callTradingApi<{ ok: boolean }>("setTradeOutcome", { tradeId, outcome });
 }
 
-// Freezing a trade blocks it from being closed — manually or via auto-settlement — until an
-// admin unfreezes it. Enforced server-side in api/closeTrade.js, not just in the UI.
 export async function setTradeFrozen(tradeId: string, frozen: boolean) {
   return callTradingApi<{ ok: boolean }>("setTradeFrozen", { tradeId, frozen });
 }
 
-// No cron in this project — call this whenever the wallet page loads so any elapsed days of
-// 1% compounding interest on Locked Balance get credited. The wallet's onSnapshot listener in
-// AuthContext picks up the resulting change live, so callers don't need the return value.
 export async function accrueLockedInterest() {
   return callTradingApi<{ ok: boolean }>("accrueInterest", {});
 }
 
 export async function getOpenTrades(uid: string): Promise<Trade[]> {
-  const snap = await getDocs(
-    query(collection(db, "trades"), where("uid", "==", uid), where("status", "==", "open"))
-  );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Trade);
+  const { data, error } = await supabase
+    .from('trades')
+    .select('*')
+    .eq('uid', uid)
+    .eq('status', 'open');
+  if (error) throw error;
+  return data as Trade[];
 }
 
-// Live version of getOpenTrades — needed so an admin setting adminOutcome/frozen on an
-// already-loaded open position (e.g. from AdminTrades) shows up immediately in the Trading
-// panel instead of only after the next manual refetch.
 export function subscribeToOpenTrades(uid: string, onUpdate: (trades: Trade[]) => void): () => void {
-  const q = query(collection(db, "trades"), where("uid", "==", uid), where("status", "==", "open"));
-  return onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Trade));
-  });
+  // Initial fetch
+  getOpenTrades(uid).then(onUpdate).catch(console.error);
+
+  const channel = supabase
+    .channel('public:trades')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'trades', filter: `uid=eq.${uid}` },
+      () => {
+        // Simple strategy: refetch on any change to this user's trades
+        getOpenTrades(uid).then(onUpdate).catch(console.error);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 export async function getClosedTrades(uid: string): Promise<Trade[]> {
-  const snap = await getDocs(
-    query(collection(db, "trades"), where("uid", "==", uid), where("status", "==", "closed"), orderBy("closedAt", "desc"))
-  );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Trade);
+  const { data, error } = await supabase
+    .from('trades')
+    .select('*')
+    .eq('uid', uid)
+    .eq('status', 'closed')
+    .order('closedAt', { ascending: false });
+  if (error) throw error;
+  return data as Trade[];
 }

@@ -19,7 +19,7 @@ export default function Dashboard() {
     if (!user || !profile) return;
     let cancelled = false;
 
-    getUserTransactions(user.uid).then((txs) => {
+    getUserTransactions(user.id).then((txs) => {
       if (!cancelled) setTransactions(txs);
     });
 

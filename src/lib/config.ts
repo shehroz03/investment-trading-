@@ -1,5 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 
 export interface InvestmentPlan {
   label: string;
@@ -63,20 +62,30 @@ function mergeWithDefaults(data: Partial<AppConfig>): AppConfig {
 
 export async function getAppConfig(forceRefresh = false): Promise<AppConfig> {
   if (cache && !forceRefresh) return cache;
-  const ref = doc(db, "config", "settings");
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    cache = mergeWithDefaults(snap.data() as Partial<AppConfig>);
+  const { data, error } = await supabase.from('config').select('data').eq('doc', 'settings').single();
+  
+  if (data && data.data) {
+    cache = mergeWithDefaults(data.data as Partial<AppConfig>);
     return cache;
   }
-  // First run: self-seed with sensible defaults (rules allow create-if-absent on this doc).
-  await setDoc(ref, DEFAULT_CONFIG);
-  cache = DEFAULT_CONFIG;
+  
+  if (error && error.code === 'PGRST116') {
+    await supabase.from('config').insert({ doc: 'settings', data: DEFAULT_CONFIG });
+    cache = DEFAULT_CONFIG;
+    return DEFAULT_CONFIG;
+  }
+  
+  if (error) throw error;
   return DEFAULT_CONFIG;
 }
 
 export async function updateAppConfig(patch: Partial<AppConfig>): Promise<void> {
-  await updateDoc(doc(db, "config", "settings"), patch);
+  const current = await getAppConfig();
+  const merged = { ...current, ...patch };
+  
+  const { error } = await supabase.from('config').update({ data: merged }).eq('doc', 'settings');
+  if (error) throw error;
+  
   cache = null;
   await getAppConfig(true);
 }

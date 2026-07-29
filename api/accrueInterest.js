@@ -4,51 +4,58 @@ const { withHandler, requireUid } = require("./_lib/http");
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const DAILY_RATE = 0.01;
 
-// No cron in this project — this runs lazily whenever a user's wallet page loads (see
-// accrueLockedInterest in src/lib/trading.ts), crediting whatever whole days of 1% compounding
-// interest on Locked Balance have accrued since the last check.
 module.exports = withHandler(async (req) => {
   const uid = await requireUid(req);
-  const db = admin.firestore();
-  const { FieldValue, Timestamp } = admin.firestore;
+  const supabase = admin;
 
-  const walletRef = db.collection("wallets").doc(uid);
+  const { data: wallet, error: walletError } = await supabase
+    .from("wallets")
+    .select("locked, \"lastInterestAt\"")
+    .eq("user_id", uid)
+    .single();
 
-  await db.runTransaction(async (tx) => {
-    const walletSnap = await tx.get(walletRef);
-    const wallet = walletSnap.data() ?? {};
-    const locked = wallet.locked ?? 0;
-    const lastInterestAt = wallet.lastInterestAt ?? null;
-    const now = Date.now();
+  if (walletError || !wallet) return { ok: true };
 
-    // First time this field is seen for a wallet, just baseline it — no backdated credit
-    // for however long the account existed before this feature shipped.
-    if (!lastInterestAt) {
-      tx.update(walletRef, { lastInterestAt: Timestamp.fromMillis(now) });
-      return;
-    }
+  const locked = wallet.locked || 0;
+  const lastInterestAt = wallet.lastInterestAt ? new Date(wallet.lastInterestAt).getTime() : null;
+  const now = Date.now();
 
-    const daysElapsed = Math.floor((now - lastInterestAt.toMillis()) / ONE_DAY_MS);
-    if (daysElapsed < 1) return;
+  if (!lastInterestAt) {
+    await supabase
+      .from("wallets")
+      .update({ "lastInterestAt": new Date(now).toISOString() })
+      .eq("user_id", uid);
+    return { ok: true };
+  }
 
-    const advancedAt = Timestamp.fromMillis(lastInterestAt.toMillis() + daysElapsed * ONE_DAY_MS);
-    if (locked <= 0) {
-      tx.update(walletRef, { lastInterestAt: advancedAt });
-      return;
-    }
+  const daysElapsed = Math.floor((now - lastInterestAt) / ONE_DAY_MS);
+  if (daysElapsed < 1) return { ok: true };
 
-    const interest = locked * (Math.pow(1 + DAILY_RATE, daysElapsed) - 1);
-    tx.update(walletRef, {
-      locked: FieldValue.increment(interest),
-      lastInterestAt: advancedAt,
-    });
-    tx.set(db.collection("transactions").doc(), {
-      uid,
-      type: "roi",
-      amount: interest,
-      note: "Daily interest on locked balance",
-      createdAt: FieldValue.serverTimestamp(),
-    });
+  const advancedAt = new Date(lastInterestAt + daysElapsed * ONE_DAY_MS).toISOString();
+  if (locked <= 0) {
+    await supabase
+      .from("wallets")
+      .update({ "lastInterestAt": advancedAt })
+      .eq("user_id", uid);
+    return { ok: true };
+  }
+
+  const interest = locked * (Math.pow(1 + DAILY_RATE, daysElapsed) - 1);
+  
+  await supabase
+    .from("wallets")
+    .update({
+      locked: locked + interest,
+      "lastInterestAt": advancedAt
+    })
+    .eq("user_id", uid);
+
+  await supabase.from("transactions").insert({
+    uid,
+    type: "roi",
+    amount: interest,
+    note: "Daily interest on locked balance",
+    "createdAt": new Date().toISOString()
   });
 
   return { ok: true };

@@ -181,7 +181,7 @@ export default function WalletWithdraw() {
     setError(null);
     setSubmitting(true);
     try {
-      await createWithdrawRequest({ uid: user.uid, amount: numericAmount, method, destination });
+      await createWithdrawRequest({ uid: user.id, amount: numericAmount, method, destination });
       setDeadline(null);
       setSuccess(true);
     } catch (err) {

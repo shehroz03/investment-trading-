@@ -3,10 +3,18 @@ const { withHandler, requireUid, HttpError } = require("./_lib/http");
 
 module.exports = withHandler(async (req, body) => {
   const uid = await requireUid(req);
-  const db = admin.firestore();
+  const supabase = admin;
 
-  const callerSnap = await db.collection("users").doc(uid).get();
-  if (callerSnap.data()?.role !== "admin") throw new HttpError(403, "Admin only.");
+  // Check admin role
+  const { data: caller, error: callerError } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", uid)
+    .single();
+
+  if (callerError || !caller || caller.role !== "admin") {
+    throw new HttpError(403, "Admin only.");
+  }
 
   const { targetUid, newPassword } = body;
   if (typeof targetUid !== "string" || !targetUid) throw new HttpError(400, "Invalid target user id.");
@@ -15,9 +23,10 @@ module.exports = withHandler(async (req, body) => {
   }
 
   try {
-    await admin.auth().updateUser(targetUid, { password: newPassword });
+    // In Supabase, the admin client can update another user's password using admin.auth.admin.updateUserById
+    const { data, error } = await supabase.auth.admin.updateUserById(targetUid, { password: newPassword });
+    if (error) throw error;
   } catch (err) {
-    if (err.code === "auth/user-not-found") throw new HttpError(404, "User not found.");
     throw new HttpError(500, err.message || "Failed to update password.");
   }
 

@@ -200,7 +200,7 @@ export function TradingPanel() {
   // manual reload — that's also what the price-override animation below keys off of.
   useEffect(() => {
     if (!user) return;
-    const unsubscribe = subscribeToOpenTrades(user.uid, setOpenPositions);
+    const unsubscribe = subscribeToOpenTrades(user.id, setOpenPositions);
     return unsubscribe;
   }, [user]);
 

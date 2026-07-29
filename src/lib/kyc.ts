@@ -1,5 +1,4 @@
-import { doc, getDoc, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 
 export interface KycPersonalInfo {
@@ -33,34 +32,43 @@ export async function submitKyc(
     uploadKycFile(uid, "selfie", files.selfie),
   ]);
 
-  const batch = writeBatch(db);
-  batch.set(doc(db, "kyc", uid), {
-    personalInfo,
-    idProofUrl,
-    addressProofUrl,
-    selfieUrl,
+  const { error: kycError } = await supabase.from('kyc').insert({
+    uid,
+    "personalInfo": personalInfo,
+    "idProofUrl": idProofUrl,
+    "addressProofUrl": addressProofUrl,
+    "selfieUrl": selfieUrl,
     status: "pending",
-    submittedAt: serverTimestamp(),
   });
-  batch.update(doc(db, "users", uid), { kycStatus: "pending" });
-  await batch.commit();
+  if (kycError) throw kycError;
+
+  const { error: userError } = await supabase.from('users').update({ kyc_status: "pending" }).eq('id', uid);
+  if (userError) throw userError;
 }
 
 export async function getKyc(uid: string): Promise<KycRecord | null> {
-  const snap = await getDoc(doc(db, "kyc", uid));
-  return snap.exists() ? (snap.data() as KycRecord) : null;
+  const { data, error } = await supabase.from('kyc').select('*').eq('uid', uid).single();
+  if (error || !data) return null;
+  
+  return {
+    personalInfo: data.personalInfo,
+    idProofUrl: data.idProofUrl,
+    addressProofUrl: data.addressProofUrl,
+    selfieUrl: data.selfieUrl,
+    status: data.status,
+    submittedAt: data.submittedAt,
+  } as KycRecord;
 }
 
 export async function reviewKyc(uid: string, status: "approved" | "rejected") {
-  const batch = writeBatch(db);
-  batch.update(doc(db, "kyc", uid), { status, reviewedAt: serverTimestamp() });
-  batch.update(doc(db, "users", uid), { kycStatus: status });
-  await batch.commit();
+  const { error: kycError } = await supabase.from('kyc').update({ status }).eq('uid', uid);
+  if (kycError) throw kycError;
+
+  const { error: userError } = await supabase.from('users').update({ kyc_status: status }).eq('id', uid);
+  if (userError) throw userError;
 }
 
-// Lets an admin correct a submitted KYC record (e.g. a typo'd name or address) before
-// approving/rejecting it. Firestore rules already allow admins full write access to `kyc/{uid}`,
-// so this is a plain client-side update — no serverless endpoint needed.
 export async function updateKycInfo(uid: string, personalInfo: KycPersonalInfo): Promise<void> {
-  await updateDoc(doc(db, "kyc", uid), { personalInfo });
+  const { error } = await supabase.from('kyc').update({ "personalInfo": personalInfo }).eq('uid', uid);
+  if (error) throw error;
 }

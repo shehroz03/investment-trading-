@@ -22,8 +22,8 @@ export default function AdminDeposits() {
     if (!user) return;
     setBusyId(id);
     try {
-      if (action === "approve") await approveDeposit(id, user.uid);
-      else await rejectDeposit(id, user.uid);
+      if (action === "approve") await approveDeposit(id, user.id);
+      else await rejectDeposit(id, user.id);
       await load();
     } finally {
       setBusyId(null);

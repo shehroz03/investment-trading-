@@ -1,14 +1,8 @@
 import { useState } from "react";
 import { Settings as SettingsIcon, Sun, Moon, Save, Lock } from "lucide-react";
-import {
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword,
-} from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import { useTheme } from "@/app/context/ThemeContext";
-import { auth, db } from "@/lib/firebase";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
 
@@ -21,7 +15,6 @@ export default function Settings() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
 
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
@@ -34,8 +27,11 @@ export default function Settings() {
     setSavingProfile(true);
     setProfileMessage(null);
     try {
-      await updateDoc(doc(db, "users", user.uid), { name });
+      const { error } = await supabase.from('users').update({ name }).eq('id', user.id);
+      if (error) throw error;
       setProfileMessage("Profile updated.");
+    } catch (err) {
+      console.error(err);
     } finally {
       setSavingProfile(false);
     }
@@ -51,11 +47,9 @@ export default function Settings() {
     }
     setChangingPassword(true);
     try {
-      const credential = EmailAuthProvider.credential(user.email!, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser!, credential);
-      await updatePassword(auth.currentUser!, newPassword);
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
       setPasswordMessage("Password changed successfully.");
-      setCurrentPassword("");
       setNewPassword("");
     } catch (err) {
       setPasswordError(err instanceof Error ? err.message : "Failed to change password.");
@@ -112,14 +106,6 @@ export default function Settings() {
       <Panel>
         <h3 className={`font-semibold text-sm mb-4 ${textPrimary}`}>Change Password</h3>
         <form onSubmit={changePassword} className="space-y-3 max-w-md">
-          <input
-            type="password"
-            required
-            placeholder="Current Password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
-          />
           <input
             type="password"
             required

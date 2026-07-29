@@ -163,7 +163,7 @@ export default function WalletDeposit() {
     setSubmitting(true);
     try {
       await createDepositRequest({
-        uid: user.uid,
+        uid: user.id,
         amount: numericAmount,
         method: METHOD,
         proofFile,

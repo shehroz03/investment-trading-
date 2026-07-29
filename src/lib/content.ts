@@ -1,11 +1,10 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 
 export interface NewsItem {
   id: string;
   title: string;
-  body: string;
-  createdAt: unknown;
+  content: string; // was body in firestore, but we used content in supabase SQL
+  createdAt: string;
 }
 
 export interface GuideItem {
@@ -22,40 +21,49 @@ export interface BannerItem {
 }
 
 export async function getNews(): Promise<NewsItem[]> {
-  const snap = await getDocs(query(collection(db, "news"), orderBy("createdAt", "desc")));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as NewsItem);
+  const { data, error } = await supabase.from('news').select('*').order('createdAt', { ascending: false });
+  if (error) throw error;
+  return data as NewsItem[];
 }
 
 export async function getGuides(): Promise<GuideItem[]> {
-  const snap = await getDocs(collection(db, "guides"));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as GuideItem);
+  const { data, error } = await supabase.from('guides').select('*');
+  if (error) throw error;
+  return data as GuideItem[];
 }
 
 export async function getBanners(): Promise<BannerItem[]> {
-  const snap = await getDocs(collection(db, "banners"));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as BannerItem);
+  const { data, error } = await supabase.from('banners').select('*');
+  if (error) throw error;
+  return data as BannerItem[];
 }
 
-export async function createNews(title: string, body: string) {
-  await addDoc(collection(db, "news"), { title, body, createdAt: serverTimestamp() });
+export async function createNews(title: string, content: string) {
+  const { error } = await supabase.from('news').insert({ title, content });
+  if (error) throw error;
 }
 
 export async function deleteNews(id: string) {
-  await deleteDoc(doc(db, "news", id));
+  const { error } = await supabase.from('news').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function createGuide(title: string, description: string, fileUrl: string) {
-  await addDoc(collection(db, "guides"), { title, description, fileUrl });
+  const { error } = await supabase.from('guides').insert({ title, description, "fileUrl": fileUrl });
+  if (error) throw error;
 }
 
 export async function deleteGuide(id: string) {
-  await deleteDoc(doc(db, "guides", id));
+  const { error } = await supabase.from('guides').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function createBanner(title: string, imageUrl: string) {
-  await addDoc(collection(db, "banners"), { title, imageUrl });
+  const { error } = await supabase.from('banners').insert({ title, "imageUrl": imageUrl });
+  if (error) throw error;
 }
 
 export async function deleteBanner(id: string) {
-  await deleteDoc(doc(db, "banners", id));
+  const { error } = await supabase.from('banners').delete().eq('id', id);
+  if (error) throw error;
 }

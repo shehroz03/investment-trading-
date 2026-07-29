@@ -46,7 +46,7 @@ export function TradePnlChart() {
 
   useEffect(() => {
     if (!user) return;
-    getClosedTrades(user.uid).then(setTrades);
+    getClosedTrades(user.id).then(setTrades);
   }, [user]);
 
   // getClosedTrades returns newest-first; flip to chronological (oldest -> newest) so the

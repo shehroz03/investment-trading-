@@ -29,7 +29,7 @@ export default function WalletBalance() {
 
   useEffect(() => {
     if (!user) return;
-    getUserTransactions(user.uid).then(setTransactions);
+    getUserTransactions(user.id).then(setTransactions);
   }, [user]);
 
   // No cron in this project — credit whatever days of locked-balance interest have

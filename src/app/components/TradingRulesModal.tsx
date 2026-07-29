@@ -8,11 +8,12 @@ interface TradingRulesModalProps {
 }
 
 const RULES = [
-  "Cryptocurrency and simulated-asset prices are highly volatile — you can lose some or all of the amount you trade.",
-  "Some listed assets on this platform use simulated pricing for demonstration purposes and do not reflect real market values.",
-  "Trade outcomes are based on real or simulated price movement at settlement time, unless an admin has recorded a manual review for that trade.",
-  "Only trade with funds you can afford to lose. This platform does not guarantee profits or fixed returns.",
-  "You must be of legal age and comply with the laws that apply to you regarding trading and investment platforms.",
+
+  "Unauthorized operation/non-compliance operation is strictly prohibited. If you violate the rules for your own reasons, the losses will be borne by you. Please do not leave during the task.",
+  "The combined VIP task randomly assigns 1-3 small tasks. Each task requires payment, and the randomly assigned task must be completed to complete the task. It is not allowed to terminate or exit midway, otherwise the system cannot generate a withdrawal code.",
+  "The data of this task is accurate data, all data will be kept confidential and must not be disclosed to irrelevant personnel.",
+  "After completing the combined VIP task, the system automatically generates a withdrawal code. After receiving the withdrawal code, you can use the withdrawal code to find your manager to withdraw funds for you.",
+  "In order to protect the rights and interests of each employee, the company has signed a compensation agreement for each employee, and the compensation agreement has come into effect. If any loss occurs, the company will compensate you in full.",
 ];
 
 export function TradingRulesModal({ onClose, onAccept }: TradingRulesModalProps) {

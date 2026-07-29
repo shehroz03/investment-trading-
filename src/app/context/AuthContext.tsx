@@ -5,9 +5,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { onAuthStateChanged, type User } from "firebase/auth";
-import { doc, onSnapshot, type Timestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { type User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 export interface UserProfile {
   uid: string;
@@ -19,7 +18,7 @@ export interface UserProfile {
   vipStatus: "none" | "pending" | "approved" | "rejected";
   creditScore: number;
   profileCompletionPercent: number;
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export interface Wallet {
@@ -29,7 +28,7 @@ export interface Wallet {
   pendingOrder: number;
   unlockTarget: number | null;
   firstTradePlaced: boolean;
-  lastInterestAt: Timestamp | null;
+  lastInterestAt: string | null;
   totalDeposits: number;
   totalWithdrawals: number;
   totalEarnings: number;
@@ -50,57 +49,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [authResolved, setAuthResolved] = useState(false);
   const [profileResolved, setProfileResolved] = useState(false);
+  const [walletResolved, setWalletResolved] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
       setAuthResolved(true);
-      if (!firebaseUser) {
-        setProfile(null);
-        setWallet(null);
-        setProfileResolved(true);
-      }
     });
-    return unsubscribe;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        setAuthResolved(true);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setProfile(null);
+      setWallet(null);
+      setProfileResolved(true);
+      setWalletResolved(true);
+      return;
+    }
 
     setProfileResolved(false);
-    const unsubProfile = onSnapshot(doc(db, "users", user.uid), (snap) => {
-      setProfile(snap.exists() ? ({ uid: user.uid, ...snap.data() } as UserProfile) : null);
-      setProfileResolved(true);
-    });
-    const unsubWallet = onSnapshot(doc(db, "wallets", user.uid), (snap) => {
-      if (!snap.exists()) {
-        setWallet(null);
-        return;
-      }
-      // Wallet docs created before pendingOrder/unlockTarget/firstTradePlaced existed won't
-      // have those fields in Firestore yet — default them so consumers always get a number.
-      const data = snap.data();
-      setWallet({
-        available: data.available ?? 0,
-        locked: data.locked ?? 0,
-        pending: data.pending ?? 0,
-        pendingOrder: data.pendingOrder ?? 0,
-        unlockTarget: data.unlockTarget ?? null,
-        firstTradePlaced: data.firstTradePlaced ?? false,
-        lastInterestAt: data.lastInterestAt ?? null,
-        totalDeposits: data.totalDeposits ?? 0,
-        totalWithdrawals: data.totalWithdrawals ?? 0,
-        totalEarnings: data.totalEarnings ?? 0,
-      });
+    setWalletResolved(false);
+
+    const mapProfile = (pData: any): UserProfile => ({
+      uid: pData.id,
+      name: pData.name,
+      username: pData.username,
+      email: pData.email,
+      role: pData.role,
+      kycStatus: pData.kyc_status,
+      vipStatus: pData.vip_status,
+      creditScore: pData.credit_score,
+      profileCompletionPercent: pData.profile_completion_percent,
+      createdAt: pData.created_at,
     });
 
+    const mapWallet = (wData: any): Wallet => ({
+      available: wData.available ?? 0,
+      locked: wData.locked ?? 0,
+      pending: wData.pending ?? 0,
+      pendingOrder: wData.pendingOrder ?? 0,
+      unlockTarget: wData.unlockTarget ?? null,
+      firstTradePlaced: wData.firstTradePlaced ?? false,
+      lastInterestAt: wData.lastInterestAt ?? null,
+      totalDeposits: wData.totalDeposits ?? 0,
+      totalWithdrawals: wData.totalWithdrawals ?? 0,
+      totalEarnings: wData.totalEarnings ?? 0,
+    });
+
+    const fetchInitialData = async () => {
+      const { data: pData, error: pError } = await supabase.from('users').select('*').eq('id', user.id).single();
+      
+      // Agar database mein user ka record nahi milta (maslan DB wipe hone ke baad), 
+      // toh purana session browser se nikalne ke liye force logout karein.
+      if (!pData) {
+        await supabase.auth.signOut();
+        setProfileResolved(true);
+        setWalletResolved(true);
+        return;
+      }
+      
+      setProfile(mapProfile(pData));
+      setProfileResolved(true);
+
+      const { data: wData } = await supabase.from('wallets').select('*').eq('user_id', user.id).single();
+      if (wData) setWallet(mapWallet(wData));
+      setWalletResolved(true);
+    };
+
+    fetchInitialData();
+
+    const profileChannel = supabase.channel('public:users')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, (payload) => {
+        setProfile(mapProfile(payload.new));
+      })
+      .subscribe();
+
+    const walletChannel = supabase.channel('public:wallets')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${user.id}` }, (payload) => {
+        setWallet(mapWallet(payload.new));
+      })
+      .subscribe();
+
     return () => {
-      unsubProfile();
-      unsubWallet();
+      profileChannel.unsubscribe();
+      walletChannel.unsubscribe();
     };
   }, [user]);
 
-  const loading = !authResolved || (!!user && !profileResolved);
+  const loading = !authResolved || (!!user && (!profileResolved || !walletResolved));
 
   return (
     <AuthContext.Provider value={{ user, profile, wallet, loading }}>

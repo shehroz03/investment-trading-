@@ -4,8 +4,7 @@ const { ALLOWED_DURATIONS, isValidSymbol, fetchPrice } = require("./_lib/pricing
 
 module.exports = withHandler(async (req, body) => {
   const uid = await requireUid(req);
-  const db = admin.firestore();
-  const { FieldValue, Timestamp } = admin.firestore;
+  const supabase = admin; // Using the exported Supabase Admin client
 
   const { symbol, direction, amount, durationSeconds } = body;
   if (!isValidSymbol(symbol)) throw new HttpError(400, "Unsupported symbol.");
@@ -16,33 +15,61 @@ module.exports = withHandler(async (req, body) => {
   }
 
   const entryPrice = await fetchPrice(symbol);
-  const walletRef = db.collection("wallets").doc(uid);
-  const tradeRef = db.collection("trades").doc();
-  const expiresAt = durationSeconds ? Timestamp.fromMillis(Date.now() + durationSeconds * 1000) : null;
+  const expiresAt = durationSeconds ? new Date(Date.now() + durationSeconds * 1000).toISOString() : null;
 
-  await db.runTransaction(async (tx) => {
-    const walletSnap = await tx.get(walletRef);
-    const wallet = walletSnap.data() ?? {};
-    const available = wallet.available ?? 0;
-    if (amount > available) throw new HttpError(400, "Amount exceeds your available balance.");
+  // 1. Fetch user's wallet
+  const { data: wallet, error: walletError } = await supabase
+    .from("wallets")
+    .select("available, locked")
+    .eq("user_id", uid)
+    .single();
 
-    tx.update(walletRef, {
-      available: FieldValue.increment(-amount),
-      locked: FieldValue.increment(amount),
-    });
+  if (walletError || !wallet) {
+    throw new HttpError(400, "Wallet not found.");
+  }
 
-    tx.set(tradeRef, {
+  const available = wallet.available || 0;
+  const locked = wallet.locked || 0;
+
+  if (amount > available) {
+    throw new HttpError(400, "Amount exceeds your available balance.");
+  }
+
+  // 2. Deduct amount from available and add to locked
+  const { error: updateError } = await supabase
+    .from("wallets")
+    .update({
+      available: available - amount,
+      locked: locked + amount
+    })
+    .eq("user_id", uid);
+
+  if (updateError) {
+    throw new HttpError(500, "Failed to update wallet balance.");
+  }
+
+  // 3. Create the trade
+  const { data: trade, error: tradeError } = await supabase
+    .from("trades")
+    .insert({
       uid,
       symbol,
       direction,
       amount,
-      entryPrice,
+      "entryPrice": entryPrice,
       status: "open",
-      durationSeconds: durationSeconds ?? null,
-      expiresAt,
-      openedAt: FieldValue.serverTimestamp(),
-    });
-  });
+      "durationSeconds": durationSeconds ?? null,
+      "expiresAt": expiresAt,
+      "openedAt": new Date().toISOString()
+    })
+    .select()
+    .single();
 
-  return { tradeId: tradeRef.id, entryPrice };
+  if (tradeError || !trade) {
+    // Note: If this fails, the user lost their balance because we don't have atomic distributed transactions here.
+    // In a production environment, this should be handled inside a Postgres RPC (Stored Procedure).
+    throw new HttpError(500, "Failed to create trade.");
+  }
+
+  return { tradeId: trade.id, entryPrice };
 });

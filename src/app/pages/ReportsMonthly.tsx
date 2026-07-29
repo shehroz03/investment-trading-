@@ -12,7 +12,7 @@ export default function ReportsMonthly() {
 
   useEffect(() => {
     if (!user) return;
-    getUserTransactions(user.uid).then(setTransactions);
+    getUserTransactions(user.id).then(setTransactions);
   }, [user]);
 
   const groups = groupByPeriod(transactions, "month");
