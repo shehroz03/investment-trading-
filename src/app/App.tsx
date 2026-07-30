@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/app/context/ThemeContext";
 import { ProtectedRoute } from "@/app/routes/ProtectedRoute";
 import { AdminRoute } from "@/app/routes/AdminRoute";
 import { DashboardLayout } from "@/app/layouts/DashboardLayout";
+import { AdminLayout } from "@/app/layouts/AdminLayout";
 
 import Login from "@/app/pages/Login";
 import Signup from "@/app/pages/Signup";
@@ -30,6 +31,7 @@ import AdminTrades from "@/app/pages/admin/AdminTrades";
 import VipChannel from "@/app/pages/VipChannel";
 import AdminVip from "@/app/pages/admin/AdminVip";
 import Support from "@/app/pages/Support";
+import MakeMeAdmin from "@/app/pages/MakeMeAdmin";
 import AdminSupport from "@/app/pages/admin/AdminSupport";
 
 export default function App() {
@@ -42,6 +44,7 @@ export default function App() {
             <Route path="/signup" element={<Signup />} />
 
             <Route element={<ProtectedRoute />}>
+              <Route path="/make-me-admin" element={<MakeMeAdmin />} />
               <Route element={<DashboardLayout />}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/trade" element={<Trade />} />
@@ -59,6 +62,9 @@ export default function App() {
                 <Route path="/vip-channel" element={<VipChannel />} />
                 <Route path="/support" element={<Support />} />
 
+              </Route>
+
+              <Route element={<AdminLayout />}>
                 <Route element={<AdminRoute />}>
                   <Route path="/admin" element={<AdminHome />} />
                   <Route path="/admin/deposits" element={<AdminDeposits />} />

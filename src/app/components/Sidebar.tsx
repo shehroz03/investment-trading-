@@ -81,26 +81,6 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
       badge: profile?.vipStatus && profile.vipStatus !== "none" ? profile.vipStatus : undefined,
     },
     { label: "Settings", icon: <Settings size={18} />, to: "/settings" },
-    ...(profile?.role === "admin"
-      ? [
-          {
-            label: "Admin Panel",
-            icon: <Shield size={18} />,
-            children: [
-              { label: "Overview", icon: <Shield size={15} />, to: "/admin" },
-              { label: "Deposits", icon: <ArrowDownToLine size={15} />, to: "/admin/deposits" },
-              { label: "Withdrawals", icon: <ArrowUpFromLine size={15} />, to: "/admin/withdrawals" },
-              { label: "KYC", icon: <ShieldQuestion size={15} />, to: "/admin/kyc" },
-              { label: "VIP Requests", icon: <Crown size={15} />, to: "/admin/vip-requests" },
-              { label: "Support Tickets", icon: <MessageCircle size={15} />, to: "/admin/support" },
-              { label: "Users", icon: <Users size={15} />, to: "/admin/users" },
-              { label: "Trades", icon: <LineChart size={15} />, to: "/admin/trades" },
-              { label: "Content", icon: <Newspaper size={15} />, to: "/admin/content" },
-              { label: "Platform Settings", icon: <Settings size={15} />, to: "/admin/settings" },
-            ],
-          },
-        ]
-      : []),
   ];
 
   const toggleExpand = (label: string) => {
@@ -237,20 +217,10 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
 
           <p className={`text-xs font-semibold uppercase tracking-wider px-3 py-2 ${textMuted}`}>Utilities</p>
 
-          <a
-            href={`https://wa.me/${SUPPORT_WHATSAPP_NUMBER}`}
-            target="_blank"
-            rel="noreferrer"
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${hoverBg} ${textMuted}`}
-          >
+          <Link to="/support" onClick={onClose} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${hoverBg} ${textMuted}`}>
             <MessageCircle size={18} className="text-green-500" />
             <span className="font-medium">Live Support 24/7</span>
             <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-500 font-medium">Online</span>
-          </a>
-
-          <Link to="/support" onClick={onClose} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${hoverBg} ${textMuted}`}>
-            <MessageCircle size={18} className="text-emerald-500" />
-            <span className="font-medium">Support Tickets</span>
           </Link>
 
           <Link to="/social-banners" onClick={onClose} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${hoverBg} ${textMuted}`}>
