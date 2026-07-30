@@ -1,6 +1,10 @@
 import { supabase } from "@/lib/supabase";
 
-const TRADING_API_URL = "/api";
+// Use the environment variable if available, otherwise use relative path for development
+const TRADING_API_URL =
+  import.meta.env.VITE_TRADING_API_URL && import.meta.env.PROD
+    ? import.meta.env.VITE_TRADING_API_URL
+    : "/api";
 
 // Shared by every module that calls one of this project's Vercel serverless functions
 export async function callTradingApi<T>(endpoint: string, body: unknown): Promise<T> {
@@ -8,11 +12,18 @@ export async function callTradingApi<T>(endpoint: string, body: unknown): Promis
   const idToken = session?.access_token;
   if (!idToken) throw new Error("Sign in required.");
 
-  const res = await fetch(`${TRADING_API_URL}/${endpoint}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-    body: JSON.stringify(body),
-  });
+  const url = `${TRADING_API_URL}/${endpoint}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    console.error(`Fetch failed for ${url}:`, err);
+    throw new Error(`Failed to connect to API: ${err instanceof Error ? err.message : "Network error"}`);
+  }
 
   let data: unknown;
   try {

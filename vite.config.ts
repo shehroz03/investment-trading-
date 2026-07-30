@@ -33,4 +33,15 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  // Proxy API requests to Vercel backend during development
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.VITE_TRADING_API_URL?.replace('/api', '') || 'https://investment-trading-lilac.vercel.app',
+        changeOrigin: true,
+        rewrite: (path) => path,
+      },
+    },
+  },
 })
