@@ -20,7 +20,7 @@ interface HeaderProps {
 }
 
 export function Header({ darkMode, toggleDarkMode, onMenuToggle }: HeaderProps) {
-  const { profile } = useAuth();
+  const { profile, wallet, isDemo, setIsDemo } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
   const [historyNotifs, setHistoryNotifs] = useState<string[]>([]);
 
@@ -117,6 +117,19 @@ export function Header({ darkMode, toggleDarkMode, onMenuToggle }: HeaderProps) 
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Demo/Real Mode Toggle */}
+        <button
+          onClick={() => setIsDemo(!isDemo)}
+          className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+            isDemo
+              ? "bg-sky-500/20 text-sky-400 border border-sky-500/30 hover:bg-sky-500/30"
+              : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30"
+          }`}
+          title={isDemo ? "Switch to Real Mode" : "Switch to Demo Mode"}
+        >
+          {isDemo ? "DEMO" : "REAL"} {isDemo ? `$${(wallet?.demo_available ?? 0).toFixed(2)}` : `$${(wallet?.available ?? 0).toFixed(2)}`}
+        </button>
+
         <button
           onClick={toggleDarkMode}
           className={`p-2 rounded-lg transition-all duration-200 ${

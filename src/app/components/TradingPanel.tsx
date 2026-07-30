@@ -50,7 +50,7 @@ function formatRemaining(ms: number) {
 }
 
 export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { initialSymbol?: string, onSymbolChange?: (sym: string) => void }) {
-  const { user, wallet } = useAuth();
+  const { user, wallet, isDemo, setIsDemo } = useAuth();
   const { textPrimary, textMuted, cardBg, inputBg, divider, hoverBg, darkMode } = useThemeClasses();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -76,7 +76,6 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
   const [openPositions, setOpenPositions] = useState<Trade[]>([]);
   const [ticks, setTicks] = useState<Record<string, CryptoTick>>({});
   const [closingId, setClosingId] = useState<string | null>(null);
-  const [isDemo, setIsDemo] = useState(false);
   const [, setTick] = useState(0);
   const [showCoinPicker, setShowCoinPicker] = useState(false);
   const [allTickers, setAllTickers] = useState<MarketTick[]>([]);

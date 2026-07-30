@@ -43,6 +43,8 @@ interface AuthContextValue {
   profile: UserProfile | null;
   wallet: Wallet | null;
   loading: boolean;
+  isDemo: boolean;
+  setIsDemo: (demo: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -54,6 +56,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authResolved, setAuthResolved] = useState(false);
   const [profileResolved, setProfileResolved] = useState(false);
   const [walletResolved, setWalletResolved] = useState(false);
+  const [isDemo, setIsDemoState] = useState(() => {
+    try {
+      return localStorage.getItem('tradeMode') === 'demo';
+    } catch {
+      return false;
+    }
+  });
+
+  const setIsDemo = (demo: boolean) => {
+    setIsDemoState(demo);
+    try {
+      localStorage.setItem('tradeMode', demo ? 'demo' : 'real');
+    } catch {
+      // localStorage might not be available
+    }
+  };
 
   useEffect(() => {
     // Initial session check — runs once on mount
@@ -175,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loading = !authResolved || (!!user && (!profileResolved || !walletResolved));
 
   return (
-    <AuthContext.Provider value={{ user, profile, wallet, loading }}>
+    <AuthContext.Provider value={{ user, profile, wallet, loading, isDemo, setIsDemo }}>
       {children}
     </AuthContext.Provider>
   );
