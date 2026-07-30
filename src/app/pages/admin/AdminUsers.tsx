@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Users, Save, KeyRound } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -125,7 +125,10 @@ export default function AdminUsers() {
                 <th className="text-left px-5 py-3">Username</th>
                 <th className="text-left px-5 py-3">Email</th>
                 <th className="text-left px-5 py-3">KYC</th>
+                <th className="text-left px-5 py-3">VIP</th>
                 <th className="text-left px-5 py-3">Role</th>
+                <th className="text-left px-5 py-3">Ref. Code</th>
+                <th className="text-left px-5 py-3">Referred By</th>
                 <th className="text-left px-5 py-3">Credit Score</th>
                 <th className="text-left px-5 py-3">Profile %</th>
                 <th className="text-left px-5 py-3">Total Money</th>
@@ -139,7 +142,7 @@ export default function AdminUsers() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className={`text-center py-10 text-sm ${textMuted}`}>
+                  <td colSpan={16} className={`text-center py-10 text-sm ${textMuted}`}>
                     No users found.
                   </td>
                 </tr>
@@ -155,9 +158,20 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td className="px-5 py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${u.vipStatus === "approved" ? "bg-amber-500/15 text-amber-500" : "bg-slate-500/15 text-slate-400"}`}>
+                        {u.vipStatus}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${u.role === "admin" ? "bg-violet-500/15 text-violet-400" : "bg-slate-500/15 text-slate-400"}`}>
                         {u.role}
                       </span>
+                    </td>
+                    <td className={`px-5 py-3 font-mono text-xs ${textPrimary}`}>
+                      {u.referralCode || "—"}
+                    </td>
+                    <td className={`px-5 py-3 font-mono text-xs ${textPrimary}`}>
+                      {u.referredBy || "—"}
                     </td>
                     <td className="px-5 py-3">
                       <input

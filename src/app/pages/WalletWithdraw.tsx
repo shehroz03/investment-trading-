@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { ArrowUpFromLine, Timer } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -163,6 +163,10 @@ export default function WalletWithdraw() {
     const numericAmount = Number(amount);
     if (!numericAmount || numericAmount <= 0) {
       setError("Enter a valid amount.");
+      return;
+    }
+    if (profile?.kycStatus !== "approved") {
+      setError("KYC Verification is required to make withdrawals. Please complete KYC from the menu.");
       return;
     }
     if (wallet && numericAmount > wallet.available) {

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { PageHeader } from "@/app/components/PageHeader";
@@ -47,6 +47,7 @@ export default function Kyc() {
     try {
       await submitKyc(user.id, { fullName, dateOfBirth, address, country }, { idProof, addressProof, selfie });
       setRecord(await getKyc(user.id));
+      window.alert("Your KYC verification request has been submitted! It will be reviewed and verified within 1 to 3 business days.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit KYC.");
     } finally {
@@ -66,7 +67,7 @@ export default function Kyc() {
             {status === "approved"
               ? "Your identity has been verified."
               : status === "pending"
-                ? "We're reviewing your submission."
+                ? "We're reviewing your submission. This usually takes 1 to 3 business days."
                 : status === "rejected"
                   ? "Your submission was rejected — please resubmit with corrected documents."
                   : "Submit your documents below to get verified."}

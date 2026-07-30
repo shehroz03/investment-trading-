@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ArrowDownToLine, Upload, Copy, Check, ExternalLink } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -113,7 +113,7 @@ function BinancePayBox({ paymentInfo }: { paymentInfo: PaymentInfo }) {
 }
 
 export default function WalletDeposit() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { textPrimary, textMuted, inputBg, divider } = useThemeClasses();

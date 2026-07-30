@@ -18,6 +18,8 @@ export interface UserProfile {
   vipStatus: "none" | "pending" | "approved" | "rejected";
   creditScore: number;
   profileCompletionPercent: number;
+  referralCode?: string | null;
+  referredBy?: string | null;
   createdAt: string;
 }
 
@@ -99,6 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       vipStatus: pData.vip_status,
       creditScore: pData.credit_score,
       profileCompletionPercent: pData.profile_completion_percent,
+      referralCode: pData.referral_code,
+      referredBy: pData.referred_by,
       createdAt: pData.created_at,
     });
 
@@ -130,8 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await new Promise(r => setTimeout(r, 500));
       }
       
-      // Agar database mein user ka record nahi milta (maslan DB wipe hone ke baad), 
-      // toh purana session browser se nikalne ke liye force logout karein.
+      // If the user record is not found in the database (e.g. after a DB wipe),
+      // force logout to clear the stale session from the browser.
       if (!pData) {
         await supabase.auth.signOut();
         setProfileResolved(true);

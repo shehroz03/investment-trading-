@@ -65,20 +65,6 @@ export async function openTrade(
 }
 
 export async function setDemoBalance(amount: number) {
-  // Temporary local testing fallback: Try updating Supabase directly first
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    const { error } = await supabase
-      .from("wallets")
-      .update({ demo_available: amount })
-      .eq("user_id", session.user.id);
-      
-    if (!error) {
-      return { success: true, demo_available: amount };
-    }
-  }
-  
-  // If direct update fails (e.g. due to RLS), fallback to the Vercel API
   return callTradingApi<{ success: boolean; demo_available: number }>("setDemoBalance", { amount });
 }
 
