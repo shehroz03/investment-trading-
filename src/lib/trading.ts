@@ -13,8 +13,20 @@ export async function callTradingApi<T>(endpoint: string, body: unknown): Promis
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
     body: JSON.stringify(body),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Request failed.");
+
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Server error (${res.status}): ${res.statusText || "Failed to parse response"}`);
+  }
+
+  if (!res.ok) {
+    const errorMsg = (typeof data === 'object' && data !== null && 'error' in data)
+      ? (data as Record<string, unknown>).error
+      : "Request failed.";
+    throw new Error(String(errorMsg));
+  }
   return data as T;
 }
 
