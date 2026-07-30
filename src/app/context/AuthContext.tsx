@@ -76,7 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    const userId = user?.id;
+
+    if (!userId) {
       setProfile(null);
       setWallet(null);
       setProfileResolved(true);
@@ -120,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Retry up to 4 times (2 seconds total) to allow auth.ts to finish inserting the profile
       for (let i = 0; i < 4; i++) {
-        const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
+        const { data } = await supabase.from('users').select('*').eq('id', userId).single();
         if (data) {
           pData = data;
           break;
@@ -140,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(mapProfile(pData));
       setProfileResolved(true);
 
-      const { data: wData } = await supabase.from('wallets').select('*').eq('user_id', user.id).single();
+      const { data: wData } = await supabase.from('wallets').select('*').eq('user_id', userId).single();
       if (wData) setWallet(mapWallet(wData));
       setWalletResolved(true);
     };
@@ -148,13 +150,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchInitialData();
 
     const profileChannel = supabase.channel('public:users')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users', filter: `id=eq.${user.id}` }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users', filter: `id=eq.${userId}` }, (payload) => {
         setProfile(mapProfile(payload.new));
       })
       .subscribe();
 
     const walletChannel = supabase.channel('public:wallets')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${user.id}` }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${userId}` }, (payload) => {
         setWallet(mapWallet(payload.new));
       })
       .subscribe();
@@ -163,7 +165,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileChannel.unsubscribe();
       walletChannel.unsubscribe();
     };
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const loading = !authResolved || (!!user && (!profileResolved || !walletResolved));
 
