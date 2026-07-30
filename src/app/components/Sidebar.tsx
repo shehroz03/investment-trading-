@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router";
 import {
   LayoutDashboard,
@@ -84,6 +84,14 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
     { label: "My Referrals", icon: <Users2 size={18} />, to: "/referrals" },
     { label: "Settings", icon: <Settings size={18} />, to: "/settings" },
   ];
+
+  if (profile?.role === "admin") {
+    navItems.push({
+      label: "Admin Panel",
+      icon: <ShieldCheck size={18} />,
+      to: "/admin",
+    });
+  }
 
   const toggleExpand = (label: string) => {
     setExpandedItems((prev) =>

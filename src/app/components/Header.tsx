@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import {
   Menu,
@@ -11,6 +11,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 interface HeaderProps {
   darkMode: boolean;
@@ -21,6 +22,52 @@ interface HeaderProps {
 export function Header({ darkMode, toggleDarkMode, onMenuToggle }: HeaderProps) {
   const { profile } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [historyNotifs, setHistoryNotifs] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!profile) return;
+    
+    const fetchHistory = async () => {
+      const { data: deposits } = await supabase
+        .from("deposits")
+        .select("amount, status, createdAt")
+        .eq("uid", profile.uid)
+        .order("createdAt", { ascending: false })
+        .limit(3);
+
+      const { data: withdrawals } = await supabase
+        .from("withdrawals")
+        .select("amount, status, createdAt")
+        .eq("uid", profile.uid)
+        .order("createdAt", { ascending: false })
+        .limit(3);
+
+      const combined: { msg: string; date: Date }[] = [];
+      
+      deposits?.forEach((d) => {
+        let msg = "";
+        if (d.status === "pending") msg = `Your deposit of $${d.amount} is pending review.`;
+        if (d.status === "approved") msg = `Your deposit of $${d.amount} was approved!`;
+        if (d.status === "rejected") msg = `Your deposit of $${d.amount} was rejected.`;
+        if (msg) combined.push({ msg, date: new Date(d.createdAt) });
+      });
+
+      withdrawals?.forEach((w) => {
+        let msg = "";
+        if (w.status === "pending") msg = `Your withdrawal of $${w.amount} is pending review.`;
+        if (w.status === "approved") msg = `Your withdrawal of $${w.amount} was approved!`;
+        if (w.status === "rejected") msg = `Your withdrawal of $${w.amount} was rejected.`;
+        if (msg) combined.push({ msg, date: new Date(w.createdAt) });
+      });
+
+      // Sort by date descending and take top 5
+      combined.sort((a, b) => b.date.getTime() - a.date.getTime());
+      
+      setHistoryNotifs(combined.slice(0, 5).map(c => c.msg));
+    };
+
+    fetchHistory();
+  }, [profile]);
 
   const notifications = [
     "Welcome to WealthHub!",
@@ -29,6 +76,7 @@ export function Header({ darkMode, toggleDarkMode, onMenuToggle }: HeaderProps) 
       : profile?.kycStatus === "approved"
         ? "Your KYC has been approved"
         : "Complete your KYC verification",
+    ...historyNotifs,
   ];
 
   return (
