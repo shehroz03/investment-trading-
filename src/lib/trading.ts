@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-const TRADING_API_URL = import.meta.env.VITE_TRADING_API_URL;
+const TRADING_API_URL = "/api";
 
 // Shared by every module that calls one of this project's Vercel serverless functions
 export async function callTradingApi<T>(endpoint: string, body: unknown): Promise<T> {
