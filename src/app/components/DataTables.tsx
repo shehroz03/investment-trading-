@@ -1,4 +1,4 @@
-import { Receipt, Search } from "lucide-react";
+﻿import { Receipt, Search } from "lucide-react";
 import { Link } from "react-router";
 import type { TransactionRecord } from "@/lib/transactions";
 
@@ -43,7 +43,7 @@ export function DataTables({ darkMode, transactions }: DataTablesProps) {
     <div className={`rounded-xl border ${cardBg}`}>
       <div className="flex items-center justify-between px-5 py-4 border-b border-inherit">
         <div className="flex items-center gap-2">
-          <Receipt size={18} className="text-teal-500" />
+          <Receipt size={18} className="text-violet-500" />
           <h3 className={`font-semibold text-sm ${textPrimary}`}>Recent Transactions</h3>
         </div>
         <Link

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/app/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -38,7 +38,7 @@ export default function MakeMeAdmin() {
     <div className="min-h-screen flex items-center justify-center bg-[#09090B] text-white">
       <div className="p-6 bg-[#151B23] border border-white/10 rounded-xl">
         <h1 className="text-xl font-bold mb-4">Admin Access Upgrade</h1>
-        <p className="text-teal-400">{status}</p>
+        <p className="text-violet-400">{status}</p>
       </div>
     </div>
   );

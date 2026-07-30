@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -35,11 +35,11 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <LayoutDashboard size={20} className="text-teal-500" />
+            <LayoutDashboard size={20} className="text-violet-500" />
             <h1 className={`font-bold ${darkMode ? "text-white" : "text-slate-900"}`}>Dashboard</h1>
           </div>
           <p className={`text-sm ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-            Welcome back, <span className="text-teal-500 font-medium">{profile.name}</span>! Here's your investment overview.
+            Welcome back, <span className="text-violet-500 font-medium">{profile.name}</span>! Here's your investment overview.
           </p>
         </div>
 

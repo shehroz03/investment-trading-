@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { FileText, Download } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { PageHeader } from "@/app/components/PageHeader";
@@ -26,7 +26,7 @@ export default function ReportsMonthly() {
         action={
           <button
             onClick={() => exportTransactionsToCsv(transactions, "monthly-report.csv")}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/30"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-violet-500/15 text-violet-400 border border-violet-500/30"
           >
             <Download size={15} /> Export CSV
           </button>

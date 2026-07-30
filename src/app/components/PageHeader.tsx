@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { useTheme } from "@/app/context/ThemeContext";
 
 interface PageHeaderProps {
@@ -17,7 +17,7 @@ export function PageHeader({ icon, title, subtitle, action }: PageHeaderProps) {
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-teal-500">{icon}</span>
+          <span className="text-violet-500">{icon}</span>
           <h1 className={`font-bold ${textPrimary}`}>{title}</h1>
         </div>
         {subtitle && <p className={`text-sm ${textMuted}`}>{subtitle}</p>}

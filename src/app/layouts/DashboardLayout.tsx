@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Outlet } from "react-router";
 import { Header } from "@/app/components/Header";
 import { Sidebar } from "@/app/components/Sidebar";
@@ -22,7 +22,7 @@ export function DashboardLayout() {
           <div className="p-4 lg:p-6 space-y-6 max-w-screen-2xl mx-auto">
             <Outlet />
             <footer className={`text-center text-xs pb-4 ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-              © 2026 Creator Zone. All Rights Reserved.
+              © 2026 WealthHub. All Rights Reserved.
             </footer>
           </div>
         </main>

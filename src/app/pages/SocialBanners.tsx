@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Image as ImageIcon, Download } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -39,7 +39,7 @@ export default function SocialBanners() {
                   download
                   target="_blank"
                   rel="noreferrer"
-                  className="p-2 rounded-lg bg-teal-500/15 text-teal-400 border border-teal-500/30"
+                  className="p-2 rounded-lg bg-violet-500/15 text-violet-400 border border-violet-500/30"
                 >
                   <Download size={14} />
                 </a>

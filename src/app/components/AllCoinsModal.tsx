@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { subscribeToAllTickers, type MarketTick } from "@/lib/crypto";
 import { useThemeClasses } from "@/app/components/Panel";
@@ -57,7 +57,7 @@ export function AllCoinsModal({ onClose, onSelect }: AllCoinsModalProps) {
               placeholder="Search coins (e.g. BTC, ETH, SOL)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+              className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`}
             />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Settings as SettingsIcon, Sun, Moon, Save, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
@@ -75,7 +75,7 @@ export default function Settings() {
             <p className={`text-2xl font-bold ${textPrimary}`}>{profile.profileCompletionPercent ?? 0}%</p>
             <div className={`h-1.5 mt-1.5 rounded-full overflow-hidden ${darkMode ? "bg-white/8" : "bg-slate-100"}`}>
               <div
-                className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full"
+                className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full"
                 style={{ width: `${Math.min(100, Math.max(0, profile.profileCompletionPercent ?? 0))}%` }}
               />
             </div>
@@ -87,16 +87,16 @@ export default function Settings() {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`}
           />
           <p className={`text-xs ${textMuted}`}>
             Username <span className="font-mono">{profile.username}</span> and email <span className="font-mono">{profile.email}</span> can't be changed.
           </p>
-          {profileMessage && <p className="text-xs text-teal-400">{profileMessage}</p>}
+          {profileMessage && <p className="text-xs text-violet-400">{profileMessage}</p>}
           <button
             type="submit"
             disabled={savingProfile}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-lg text-sm font-semibold shadow-lg shadow-teal-600/30 disabled:opacity-60"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-sm font-semibold shadow-lg shadow-violet-600/30 disabled:opacity-60"
           >
             <Save size={15} /> {savingProfile ? "Saving..." : "Save Changes"}
           </button>
@@ -112,14 +112,14 @@ export default function Settings() {
             placeholder="New Password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`}
           />
           {passwordError && <p className="text-xs text-red-400">{passwordError}</p>}
-          {passwordMessage && <p className="text-xs text-teal-400">{passwordMessage}</p>}
+          {passwordMessage && <p className="text-xs text-violet-400">{passwordMessage}</p>}
           <button
             type="submit"
             disabled={changingPassword}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-lg text-sm font-semibold shadow-lg shadow-teal-600/30 disabled:opacity-60"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg text-sm font-semibold shadow-lg shadow-violet-600/30 disabled:opacity-60"
           >
             <Lock size={15} /> {changingPassword ? "Updating..." : "Update Password"}
           </button>

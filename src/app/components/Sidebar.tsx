@@ -1,9 +1,10 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router";
 import {
   LayoutDashboard,
   ShieldCheck,
   Users,
+  Users2,
   Wallet,
   FileText,
   Settings,
@@ -80,6 +81,7 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
       to: "/vip-channel",
       badge: profile?.vipStatus && profile.vipStatus !== "none" ? profile.vipStatus : undefined,
     },
+    { label: "My Referrals", icon: <Users2 size={18} />, to: "/referrals" },
     { label: "Settings", icon: <Settings size={18} />, to: "/settings" },
   ];
 
@@ -113,10 +115,10 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
       >
         <div className="lg:hidden flex items-center justify-between px-4 h-16 border-b border-inherit">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-              <span className="text-white font-bold text-xs">C</span>
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+              <span className="text-white font-bold text-xs">W</span>
             </div>
-            <span className={`font-semibold text-sm ${textPrimary}`}>Creator Zone</span>
+            <span className={`font-semibold text-sm ${textPrimary}`}>WealthHub</span>
           </div>
           <button onClick={onClose} className={`p-1.5 rounded-lg ${hoverBg} ${textMuted}`}>
             <X size={18} />
@@ -125,7 +127,7 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
 
         <div className={`mx-3 mt-4 mb-2 p-4 rounded-xl border ${cardBg}`}>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/30">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/30">
               <User size={22} className="text-white" />
             </div>
             <div className="min-w-0">
@@ -133,11 +135,11 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
               <div className="flex flex-col gap-0.5 mt-0.5">
                 <span className={`text-xs ${textMuted}`}>
                   <span className={darkMode ? "text-slate-500" : "text-slate-400"}>Username:</span>{" "}
-                  <span className="text-teal-500 font-medium">{profile?.username ?? "..."}</span>
+                  <span className="text-violet-500 font-medium">{profile?.username ?? "..."}</span>
                 </span>
                 <span className={`text-xs ${textMuted}`}>
                   <span className={darkMode ? "text-slate-500" : "text-slate-400"}>Credit Score:</span>{" "}
-                  <span className="text-teal-500 font-medium">{profile?.creditScore ? `${profile.creditScore}/100` : "—"}</span>
+                  <span className="text-violet-500 font-medium">{profile?.creditScore ? `${profile.creditScore}/100` : "—"}</span>
                 </span>
               </div>
             </div>
@@ -155,9 +157,9 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
             const content = (
               <>
                 {active && (
-                  <div className="absolute left-3 w-1 h-6 rounded-r-full bg-teal-500" style={{ marginLeft: "-12px" }} />
+                  <div className="absolute left-3 w-1 h-6 rounded-r-full bg-violet-500" style={{ marginLeft: "-12px" }} />
                 )}
-                <span className={active ? "text-teal-500" : ""}>{item.icon}</span>
+                <span className={active ? "text-violet-500" : ""}>{item.icon}</span>
                 <span className="flex-1 text-left font-medium">{item.label}</span>
                 {item.badge && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-medium capitalize">
@@ -175,7 +177,7 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
             const className = `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 group relative ${
               active
                 ? darkMode
-                  ? "bg-teal-500/15 text-teal-400 shadow-sm"
+                  ? "bg-violet-500/15 text-violet-400 shadow-sm"
                   : "bg-teal-50 text-teal-700"
                 : `${hoverBg} ${textMuted} hover:${textPrimary}`
             }`;
@@ -193,14 +195,14 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
                 )}
 
                 {hasChildren && isExpanded && (
-                  <div className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-teal-500/30 pl-3">
+                  <div className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-violet-500/30 pl-3">
                     {item.children!.map((child) => (
                       <Link
                         key={child.label}
                         to={child.to}
                         onClick={onClose}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-colors ${hoverBg} ${
-                          isActive(child.to) ? "text-teal-500 font-medium" : textMuted
+                          isActive(child.to) ? "text-violet-500 font-medium" : textMuted
                         }`}
                       >
                         {child.icon}
@@ -248,7 +250,7 @@ export function Sidebar({ darkMode, isOpen, onClose }: SidebarProps) {
         </div>
 
         <div className={`px-4 py-3 border-t text-xs text-center ${darkMode ? "border-white/8 text-slate-600" : "border-slate-200 text-slate-400"}`}>
-          © 2026 Creator Zone
+          © 2026 WealthHub
         </div>
       </aside>
     </>

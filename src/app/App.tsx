@@ -33,6 +33,7 @@ import AdminVip from "@/app/pages/admin/AdminVip";
 import Support from "@/app/pages/Support";
 import MakeMeAdmin from "@/app/pages/MakeMeAdmin";
 import AdminSupport from "@/app/pages/admin/AdminSupport";
+import MyReferrals from "@/app/pages/MyReferrals";
 
 export default function App() {
   return (
@@ -61,6 +62,7 @@ export default function App() {
                 <Route path="/guides" element={<Guides />} />
                 <Route path="/vip-channel" element={<VipChannel />} />
                 <Route path="/support" element={<Support />} />
+                <Route path="/referrals" element={<MyReferrals />} />
 
               </Route>
 

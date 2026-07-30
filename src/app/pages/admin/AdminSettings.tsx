@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Save, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -130,7 +130,7 @@ export default function AdminSettings() {
             <button
               type="button"
               onClick={addCoin}
-              className="flex items-center gap-1 text-xs font-semibold text-teal-500 hover:underline"
+              className="flex items-center gap-1 text-xs font-semibold text-violet-500 hover:underline"
             >
               <Plus size={13} /> Add Coin
             </button>
@@ -181,12 +181,12 @@ export default function AdminSettings() {
           </div>
         </Panel>
 
-        {message && <p className="text-xs text-teal-400">{message}</p>}
+        {message && <p className="text-xs text-violet-400">{message}</p>}
 
         <button
           type="submit"
           disabled={saving}
-          className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-teal-600/30 disabled:opacity-60"
+          className="flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-violet-600/30 disabled:opacity-60"
         >
           <Save size={15} /> {saving ? "Saving..." : "Save Settings"}
         </button>

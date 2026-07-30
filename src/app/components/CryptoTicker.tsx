@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { TrendingUp, TrendingDown, Radio, ChevronRight } from "lucide-react";
 import {
@@ -43,7 +43,7 @@ export function CryptoTicker() {
         </div>
         <button
           onClick={() => setShowAll(true)}
-          className="flex items-center gap-1 text-xs text-teal-500 font-medium hover:underline"
+          className="flex items-center gap-1 text-xs text-violet-500 font-medium hover:underline"
         >
           More
           <ChevronRight size={13} />
@@ -57,7 +57,7 @@ export function CryptoTicker() {
           const positive = (tick?.changePercent ?? 0) >= 0;
 
           return (
-            <Link to={`/trade/${symbol}`} key={symbol} className={`block rounded-xl border p-3 hover:border-teal-500/50 transition-colors cursor-pointer ${cardBg}`}>
+            <Link to={`/trade/${symbol}`} key={symbol} className={`block rounded-xl border p-3 hover:border-violet-500/50 transition-colors cursor-pointer ${cardBg}`}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className={`text-xs font-semibold ${textMuted}`}>{meta.label}</span>
                 <span className={`text-sm font-bold ${textPrimary}`}>{meta.icon}</span>

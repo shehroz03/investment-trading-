@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Wallet, ArrowDownToLine, ArrowUpFromLine, Lock, Clock, Unlock } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -43,7 +43,7 @@ export default function WalletBalance() {
   if (!wallet) return null;
 
   const balances = [
-    { label: "Available Balance", value: wallet.available, icon: Wallet, color: "text-teal-400 bg-teal-500/15" },
+    { label: "Available Balance", value: wallet.available, icon: Wallet, color: "text-violet-400 bg-violet-500/15" },
     {
       label: "Pending Order Balance",
       value: wallet.pendingOrder,
@@ -72,7 +72,7 @@ export default function WalletBalance() {
         subtitle="Manage your balance, deposits, and withdrawals"
         action={
           <div className="flex gap-2">
-            <Link to="/wallet/deposit" className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-lg text-sm font-semibold shadow-lg shadow-teal-600/30">
+            <Link to="/wallet/deposit" className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-lg text-sm font-semibold shadow-lg shadow-violet-600/30">
               <ArrowDownToLine size={15} /> Deposit
             </Link>
             <Link to="/wallet/withdraw" className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border ${textPrimary} ${divider}`}>
@@ -91,7 +91,7 @@ export default function WalletBalance() {
             <div>
               <p className={`text-xs ${textMuted}`}>{b.label}</p>
               <p className={`text-lg font-bold ${textPrimary}`}>{money(b.value)}</p>
-              {b.subtitle && <p className="text-xs text-teal-400">{b.subtitle}</p>}
+              {b.subtitle && <p className="text-xs text-violet-400">{b.subtitle}</p>}
             </div>
           </Panel>
         ))}
@@ -110,7 +110,7 @@ export default function WalletBalance() {
           </div>
           <Link
             to="/wallet/deposit?purpose=wallet"
-            className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-lg text-sm font-semibold shadow-lg shadow-teal-600/30"
+            className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-lg text-sm font-semibold shadow-lg shadow-violet-600/30"
           >
             Deposit
           </Link>

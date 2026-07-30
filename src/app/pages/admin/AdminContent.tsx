@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Newspaper, FileDown, Image as ImageIcon, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -52,7 +52,7 @@ function NewsSection() {
       <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2 mb-4">
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className={`flex-1 px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`} />
         <input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message" className={`flex-1 px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`} />
-        <button type="submit" disabled={submitting} className="flex items-center justify-center gap-1 px-4 py-2 rounded-lg text-xs font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/30 disabled:opacity-60">
+        <button type="submit" disabled={submitting} className="flex items-center justify-center gap-1 px-4 py-2 rounded-lg text-xs font-semibold bg-violet-500/15 text-violet-400 border border-violet-500/30 disabled:opacity-60">
           <Plus size={13} /> Post
         </button>
       </form>
@@ -113,7 +113,7 @@ function GuidesSection() {
         <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" className={`px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`} />
         <div className="flex gap-2">
           <input value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} placeholder="PDF URL" className={`flex-1 px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`} />
-          <button type="submit" disabled={submitting} className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/30 disabled:opacity-60 flex-shrink-0">
+          <button type="submit" disabled={submitting} className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold bg-violet-500/15 text-violet-400 border border-violet-500/30 disabled:opacity-60 flex-shrink-0">
             <Plus size={13} />
           </button>
         </div>
@@ -171,7 +171,7 @@ function BannersSection() {
       <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-2 mb-4">
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className={`flex-1 px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`} />
         <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Image URL" className={`flex-1 px-3 py-2 rounded-lg border text-sm outline-none ${inputBg}`} />
-        <button type="submit" disabled={submitting} className="flex items-center justify-center gap-1 px-4 py-2 rounded-lg text-xs font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/30 disabled:opacity-60">
+        <button type="submit" disabled={submitting} className="flex items-center justify-center gap-1 px-4 py-2 rounded-lg text-xs font-semibold bg-violet-500/15 text-violet-400 border border-violet-500/30 disabled:opacity-60">
           <Plus size={13} /> Add
         </button>
       </form>

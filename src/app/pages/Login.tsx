@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { LogIn, Mail, Lock } from "lucide-react";
 import { logIn } from "@/lib/auth";
@@ -37,10 +37,10 @@ export default function Login() {
     <div className={`min-h-screen flex items-center justify-center p-4 ${bg}`}>
       <div className={`w-full max-w-sm rounded-2xl border p-6 ${cardBg}`}>
         <div className="flex items-center gap-2.5 mb-6">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
-            <span className="text-white font-bold text-sm">C</span>
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+            <span className="text-white font-bold text-sm">W</span>
           </div>
-          <span className="font-semibold">Creator Zone</span>
+          <span className="font-semibold">WealthHub</span>
         </div>
 
         <h1 className="font-bold text-lg mb-1">Welcome back</h1>
@@ -55,7 +55,7 @@ export default function Login() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+              className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`}
             />
           </div>
           <div className="relative">
@@ -66,7 +66,7 @@ export default function Login() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+              className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`}
             />
           </div>
 
@@ -75,7 +75,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-teal-600/30 flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-violet-600/30 flex items-center justify-center gap-2"
           >
             <LogIn size={15} />
             {submitting ? "Logging in..." : "Log In"}
@@ -84,7 +84,7 @@ export default function Login() {
 
         <p className={`text-xs text-center mt-5 ${textMuted}`}>
           Don't have an account?{" "}
-          <Link to="/signup" className="text-teal-500 font-medium hover:underline">
+          <Link to="/signup" className="text-violet-500 font-medium hover:underline">
             Sign up
           </Link>
         </p>

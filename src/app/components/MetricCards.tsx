@@ -1,4 +1,4 @@
-import {
+﻿import {
   Wallet,
   ArrowDownToLine,
   Gift,
@@ -48,8 +48,8 @@ function MetricCard({
 
       {viewMore && (
         <div className="flex items-center gap-1 mt-3">
-          <span className="text-xs text-teal-500 font-medium group-hover:underline">View More</span>
-          <ChevronRight size={12} className="text-teal-500" />
+          <span className="text-xs text-violet-500 font-medium group-hover:underline">View More</span>
+          <ChevronRight size={12} className="text-violet-500" />
         </div>
       )}
     </div>

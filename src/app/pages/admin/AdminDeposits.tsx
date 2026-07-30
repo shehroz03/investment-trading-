@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { ArrowDownToLine, Check, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { PageHeader } from "@/app/components/PageHeader";
@@ -64,7 +64,7 @@ export default function AdminDeposits() {
                     </td>
                     <td className={`px-5 py-3 ${textMuted}`}>{d.method}</td>
                     <td className="px-5 py-3">
-                      <a href={d.proofUrl} target="_blank" rel="noreferrer" className="text-teal-400 hover:underline">
+                      <a href={d.proofUrl} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">
                         View
                       </a>
                     </td>

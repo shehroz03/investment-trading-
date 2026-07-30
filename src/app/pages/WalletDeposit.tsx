@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ArrowDownToLine, Upload, Copy, Check, ExternalLink } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -32,7 +32,7 @@ function CopyField({ value }: { value: string }) {
         className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
           copied
             ? "bg-green-500/20 text-green-400 border border-green-500/30"
-            : "bg-teal-500/15 text-teal-400 border border-teal-500/30 hover:bg-teal-500/25"
+            : "bg-violet-500/15 text-violet-400 border border-violet-500/30 hover:bg-violet-500/25"
         }`}
       >
         {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -185,7 +185,7 @@ export default function WalletDeposit() {
         <Panel className="text-center py-10">
           <p className={`font-semibold ${textPrimary}`}>Your deposit request is pending review.</p>
           <p className={`text-sm mt-1 ${textMuted}`}>An admin will approve it and credit your wallet shortly.</p>
-          <button onClick={() => navigate("/wallet")} className="mt-4 px-4 py-2 bg-teal-500/15 text-teal-400 border border-teal-500/30 rounded-xl text-sm font-semibold">
+          <button onClick={() => navigate("/wallet")} className="mt-4 px-4 py-2 bg-violet-500/15 text-violet-400 border border-violet-500/30 rounded-xl text-sm font-semibold">
             Back to Wallet
           </button>
         </Panel>
@@ -206,7 +206,7 @@ export default function WalletDeposit() {
                 key={p}
                 onClick={() => setPurpose(p)}
                 className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                  purpose === p ? "bg-teal-500/15 text-teal-400 border-teal-500/30" : `${textMuted} ${divider}`
+                  purpose === p ? "bg-violet-500/15 text-violet-400 border-violet-500/30" : `${textMuted} ${divider}`
                 }`}
               >
                 {p === "wallet" ? "Wallet Top-Up" : p === "order" ? "Recover Locked Balance" : "Investment Plan"}
@@ -232,7 +232,7 @@ export default function WalletDeposit() {
             placeholder="Amount (USD)"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`}
           />
 
           {config && <BinancePayBox paymentInfo={config.paymentInfo} />}
@@ -255,7 +255,7 @@ export default function WalletDeposit() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold shadow-lg shadow-teal-600/30 flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold shadow-lg shadow-violet-600/30 flex items-center justify-center gap-2"
           >
             <Upload size={15} />
             {submitting ? "Submitting..." : "Submit Deposit Request"}

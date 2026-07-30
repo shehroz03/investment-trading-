@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { PageHeader } from "@/app/components/PageHeader";
@@ -82,19 +82,19 @@ export default function Kyc() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className={`block text-xs mb-1.5 ${textMuted}`}>Full Legal Name</label>
-                  <input required placeholder="Full Legal Name" value={fullName} onChange={(e) => setFullName(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
+                  <input required placeholder="Full Legal Name" value={fullName} onChange={(e) => setFullName(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`} />
                 </div>
                 <div>
                   <label className={`block text-xs mb-1.5 ${textMuted}`}>Date of Birth</label>
-                  <input required type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
+                  <input required type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className={`block text-xs mb-1.5 ${textMuted}`}>Residential Address</label>
-                  <input required placeholder="Residential Address" value={address} onChange={(e) => setAddress(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
+                  <input required placeholder="Residential Address" value={address} onChange={(e) => setAddress(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`} />
                 </div>
                 <div>
                   <label className={`block text-xs mb-1.5 ${textMuted}`}>Country</label>
-                  <input required placeholder="Country" value={country} onChange={(e) => setCountry(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`} />
+                  <input required placeholder="Country" value={country} onChange={(e) => setCountry(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`} />
                 </div>
               </div>
             </div>
@@ -119,7 +119,7 @@ export default function Kyc() {
               <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${textMuted}`}>4. Selfie</p>
               <label className={`block text-xs mb-1.5 ${textMuted}`}>A clear photo of your face</label>
               <div className="grid grid-cols-2 gap-2">
-                <label className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer bg-teal-500/15 text-teal-400 border border-teal-500/30 hover:bg-teal-500/25">
+                <label className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold cursor-pointer bg-violet-500/15 text-violet-400 border border-violet-500/30 hover:bg-violet-500/25">
                   <Camera size={14} />
                   Take Live Photo
                   <input
@@ -149,7 +149,7 @@ export default function Kyc() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-teal-600/30 flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-violet-600/30 flex items-center justify-center gap-2"
             >
               <Upload size={15} />
               {submitting ? "Submitting..." : "Submit for Verification"}

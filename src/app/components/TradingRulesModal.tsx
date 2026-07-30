@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { useThemeClasses } from "@/app/components/Panel";
 
@@ -46,7 +46,7 @@ export function TradingRulesModal({ onClose, onAccept }: TradingRulesModalProps)
         <div className={`px-5 py-4 space-y-3 border-b ${divider}`}>
           {RULES.map((rule, i) => (
             <p key={i} className={`text-sm flex gap-2 ${textMuted}`}>
-              <span className="font-semibold text-teal-500 flex-shrink-0">{i + 1}.</span>
+              <span className="font-semibold text-violet-500 flex-shrink-0">{i + 1}.</span>
               <span>{rule}</span>
             </p>
           ))}
@@ -58,7 +58,7 @@ export function TradingRulesModal({ onClose, onAccept }: TradingRulesModalProps)
               onAccept?.();
               onClose();
             }}
-            className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-teal-600/30"
+            className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-violet-600/30"
           >
             I Understand
           </button>

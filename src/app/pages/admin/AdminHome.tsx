@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import {
   ShieldCheck,
@@ -35,7 +35,7 @@ export default function AdminHome() {
   }, []);
 
   const links = [
-    { to: "/admin/deposits", label: "Pending Deposits", icon: ArrowDownToLine, color: "text-teal-400 bg-teal-500/15", count: counts.deposits },
+    { to: "/admin/deposits", label: "Pending Deposits", icon: ArrowDownToLine, color: "text-violet-400 bg-violet-500/15", count: counts.deposits },
     { to: "/admin/withdrawals", label: "Pending Withdrawals", icon: ArrowUpFromLine, color: "text-orange-400 bg-orange-500/15", count: counts.withdrawals },
     { to: "/admin/kyc", label: "Pending KYC", icon: ShieldQuestion, color: "text-purple-400 bg-purple-500/15", count: counts.kyc },
     { to: "/admin/users", label: "Users", icon: Users, color: "text-blue-400 bg-blue-500/15", count: counts.users },

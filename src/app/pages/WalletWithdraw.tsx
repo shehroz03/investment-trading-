@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { ArrowUpFromLine, Timer } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -198,7 +198,7 @@ export default function WalletWithdraw() {
         <Panel className="text-center py-10">
           <p className={`font-semibold ${textPrimary}`}>Your withdrawal request is pending review.</p>
           <p className={`text-sm mt-1 ${textMuted}`}>The amount has been moved to your pending balance until an admin approves it.</p>
-          <button onClick={() => navigate("/wallet")} className="mt-4 px-4 py-2 bg-teal-500/15 text-teal-400 border border-teal-500/30 rounded-xl text-sm font-semibold">
+          <button onClick={() => navigate("/wallet")} className="mt-4 px-4 py-2 bg-violet-500/15 text-violet-400 border border-violet-500/30 rounded-xl text-sm font-semibold">
             Back to Wallet
           </button>
         </Panel>
@@ -225,7 +225,7 @@ export default function WalletWithdraw() {
         {profile?.vipStatus !== "approved" && (
           <p className={`text-xs mb-4 ${textMuted}`}>
             Withdrawals above ${NON_VIP_WITHDRAW_CAP.toLocaleString()} require{" "}
-            <Link to="/vip-channel" className="text-teal-400 hover:underline">
+            <Link to="/vip-channel" className="text-violet-400 hover:underline">
               VIP activation
             </Link>
             .
@@ -246,7 +246,7 @@ export default function WalletWithdraw() {
                 title={deadline !== null ? "Time limit is locked in until it expires or the request is submitted" : undefined}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border disabled:opacity-40 disabled:cursor-not-allowed ${
                   selectedMinutes === m
-                    ? "bg-teal-500/20 text-teal-400 border-teal-500/30"
+                    ? "bg-violet-500/20 text-violet-400 border-violet-500/30"
                     : `${hoverBg} ${textMuted} ${divider}`
                 }`}
               >
@@ -280,7 +280,7 @@ export default function WalletWithdraw() {
             placeholder="Amount (USD)"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`}
           />
 
           <select value={method} onChange={(e) => setMethod(e.target.value)} className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none ${inputBg}`}>
@@ -300,7 +300,7 @@ export default function WalletWithdraw() {
             placeholder="Destination (wallet address / account number)"
             value={destination}
             onChange={(e) => setDestination(e.target.value)}
-            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+            className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`}
           />
 
           {error && <p className="text-xs text-red-400">{error}</p>}
@@ -315,7 +315,7 @@ export default function WalletWithdraw() {
                   ? "Wait for the time limit to finish before you can submit"
                   : undefined
             }
-            className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold shadow-lg shadow-teal-600/30"
+            className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold shadow-lg shadow-violet-600/30"
           >
             {submitting ? "Submitting..." : "Submit Withdrawal Request"}
           </button>

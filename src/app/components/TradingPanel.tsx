@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { TrendingUp, TrendingDown, Timer, AlertTriangle, Lock, Edit2, Loader2 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
@@ -433,7 +433,7 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
                   key={iv}
                   onClick={() => setInterval_(iv)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    interval === iv ? "bg-teal-500/20 text-teal-400" : `${hoverBg} ${textMuted}`
+                    interval === iv ? "bg-violet-500/20 text-violet-400" : `${hoverBg} ${textMuted}`
                   }`}
                 >
                   {iv}
@@ -486,7 +486,7 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
                 </p>
                 <button
                   onClick={() => setTradeResult(null)}
-                  className="w-full mt-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-sm font-semibold"
+                  className="w-full mt-5 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-xl text-sm font-semibold"
                 >
                   OK
                 </button>
@@ -520,7 +520,7 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
               placeholder="Amount (USD)"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+              className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 ${inputBg}`}
             />
           </div>
 
@@ -534,7 +534,7 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
                   key={opt.label}
                   onClick={() => setDuration(opt.value)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    duration === opt.value ? "bg-teal-500/20 text-teal-400 border border-teal-500/30" : `${hoverBg} ${textMuted} border ${divider}`
+                    duration === opt.value ? "bg-violet-500/20 text-violet-400 border border-violet-500/30" : `${hoverBg} ${textMuted} border ${divider}`
                   }`}
                 >
                   {opt.label}

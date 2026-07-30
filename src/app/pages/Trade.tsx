@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router";
+﻿import { useParams, useNavigate } from "react-router";
 import { TradingPanel } from "@/app/components/TradingPanel";
 import { useTheme } from "@/app/context/ThemeContext";
 import { LineChart } from "lucide-react";
@@ -13,7 +13,7 @@ export default function Trade() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <LineChart size={20} className="text-teal-500" />
+            <LineChart size={20} className="text-violet-500" />
             <h1 className={`font-bold ${darkMode ? "text-white" : "text-slate-900"}`}>
               Trade {symbol ? symbol.replace("USDT", "") : ""}
             </h1>

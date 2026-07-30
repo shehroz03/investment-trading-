@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Newspaper } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -18,7 +18,7 @@ export default function News() {
 
   return (
     <>
-      <PageHeader icon={<Newspaper size={20} />} title="News & Updates" subtitle="Announcements from the Creator Zone team" />
+      <PageHeader icon={<Newspaper size={20} />} title="News & Updates" subtitle="Announcements from the WealthHub team" />
 
       {loaded && news.length === 0 && (
         <Panel className="text-center py-12">

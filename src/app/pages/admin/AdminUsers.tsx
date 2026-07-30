@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Users, Save, KeyRound } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -114,7 +114,7 @@ export default function AdminUsers() {
             placeholder="Search by name, username, or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className={`w-full sm:w-80 px-3 py-2 rounded-lg border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+            className={`w-full sm:w-80 px-3 py-2 rounded-lg border text-sm outline-none focus:border-violet-500 ${inputBg}`}
           />
         </div>
         <div className="overflow-x-auto">
@@ -155,7 +155,7 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td className="px-5 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${u.role === "admin" ? "bg-teal-500/15 text-teal-400" : "bg-slate-500/15 text-slate-400"}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${u.role === "admin" ? "bg-violet-500/15 text-violet-400" : "bg-slate-500/15 text-slate-400"}`}>
                         {u.role}
                       </span>
                     </td>
@@ -249,7 +249,7 @@ export default function AdminUsers() {
                         <button
                           onClick={() => setPasswordTarget(u)}
                           title="Change this user's password"
-                          className={`p-1.5 rounded-lg ${hoverBg} text-teal-400`}
+                          className={`p-1.5 rounded-lg ${hoverBg} text-violet-400`}
                         >
                           <KeyRound size={14} />
                         </button>

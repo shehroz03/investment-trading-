@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Crown, CheckCircle2, Clock, XCircle, Send } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { PageHeader } from "@/app/components/PageHeader";
@@ -82,7 +82,7 @@ export default function VipChannel() {
                 placeholder="e.g. I need to withdraw larger amounts for..."
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-teal-500 resize-none ${inputBg}`}
+                className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:border-violet-500 resize-none ${inputBg}`}
               />
             </div>
 
@@ -92,7 +92,7 @@ export default function VipChannel() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold mt-3 flex items-center justify-center gap-2"
+                className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:opacity-60 text-white rounded-xl text-sm font-semibold mt-3 flex items-center justify-center gap-2"
               >
                 <Send size={15} />
                 {submitting ? "Submitting..." : "Submit Activation Request"}

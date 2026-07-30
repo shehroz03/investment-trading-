@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router";
 import {
   Menu,
@@ -23,7 +23,7 @@ export function Header({ darkMode, toggleDarkMode, onMenuToggle }: HeaderProps) 
   const [notifOpen, setNotifOpen] = useState(false);
 
   const notifications = [
-    "Welcome to Creator Zone!",
+    "Welcome to WealthHub!",
     profile?.kycStatus === "pending"
       ? "Your KYC submission is under review"
       : profile?.kycStatus === "approved"
@@ -50,12 +50,12 @@ export function Header({ darkMode, toggleDarkMode, onMenuToggle }: HeaderProps) 
         </button>
 
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
-            <span className="text-white font-bold text-sm">C</span>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+            <span className="text-white font-bold text-sm">W</span>
           </div>
           <div className="hidden sm:block">
             <p className={`font-semibold text-sm leading-tight ${darkMode ? "text-white" : "text-slate-900"}`}>
-              Creator Zone
+              WealthHub
             </p>
           </div>
         </Link>
@@ -64,7 +64,7 @@ export function Header({ darkMode, toggleDarkMode, onMenuToggle }: HeaderProps) 
           <Home size={12} />
           <span>Home</span>
           <ChevronRight size={12} />
-          <span className="text-teal-500 font-medium">Personal Area</span>
+          <span className="text-violet-500 font-medium">Personal Area</span>
         </div>
       </div>
 
@@ -116,14 +116,14 @@ export function Header({ darkMode, toggleDarkMode, onMenuToggle }: HeaderProps) 
 
         <Link
           to="/wallet/deposit"
-          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-lg transition-all duration-200 shadow-lg shadow-teal-600/30 text-sm font-semibold"
+          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-lg transition-all duration-200 shadow-lg shadow-violet-600/30 text-sm font-semibold"
         >
           <Plus size={15} />
           <span className="hidden sm:inline">Deposit</span>
         </Link>
 
         <Link to="/settings" className={`flex items-center gap-2 pl-2 border-l ${darkMode ? "border-white/10" : "border-slate-200"}`}>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
             <User size={14} className="text-white" />
           </div>
           <div className="hidden md:block">

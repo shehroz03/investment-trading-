@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { FileDown, Download } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -18,7 +18,7 @@ export default function Guides() {
 
   return (
     <>
-      <PageHeader icon={<FileDown size={20} />} title="PDF Guides" subtitle="Downloadable guides to help you get the most out of Creator Zone" />
+      <PageHeader icon={<FileDown size={20} />} title="PDF Guides" subtitle="Downloadable guides to help you get the most out of WealthHub" />
 
       {loaded && guides.length === 0 && (
         <Panel className="text-center py-12">
@@ -39,7 +39,7 @@ export default function Guides() {
               download
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-4 py-2 bg-teal-500/15 text-teal-400 border border-teal-500/30 rounded-lg text-sm font-semibold flex-shrink-0"
+              className="flex items-center gap-1.5 px-4 py-2 bg-violet-500/15 text-violet-400 border border-violet-500/30 rounded-lg text-sm font-semibold flex-shrink-0"
             >
               <Download size={14} /> Download
             </a>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Smartphone, X, Download } from "lucide-react";
 
 interface PWAInstallProps {
@@ -21,7 +21,7 @@ export function PWAInstall({ darkMode }: PWAInstallProps) {
         style={{ maxWidth: 240 }}
       >
         {/* NEW badge */}
-        <div className="absolute -top-2.5 -left-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
+        <div className="absolute -top-2.5 -left-2 bg-gradient-to-r from-violet-500 to-purple-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
           NEW
         </div>
 
@@ -35,7 +35,7 @@ export function PWAInstall({ darkMode }: PWAInstallProps) {
           <X size={10} />
         </button>
 
-        <div className="p-2 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex-shrink-0 shadow-lg shadow-teal-500/30">
+        <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex-shrink-0 shadow-lg shadow-violet-500/30">
           <Smartphone size={18} className="text-white" />
         </div>
 
@@ -48,7 +48,7 @@ export function PWAInstall({ darkMode }: PWAInstallProps) {
           </p>
         </div>
 
-        <button className="flex-shrink-0 p-1.5 rounded-lg bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors">
+        <button className="flex-shrink-0 p-1.5 rounded-lg bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 transition-colors">
           <Download size={14} />
         </button>
       </div>

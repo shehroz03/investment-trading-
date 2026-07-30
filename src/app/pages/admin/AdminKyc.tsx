@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { ShieldQuestion, Check, X, Save } from "lucide-react";
 import { PageHeader } from "@/app/components/PageHeader";
 import { Panel, useThemeClasses } from "@/app/components/Panel";
@@ -74,7 +74,7 @@ export default function AdminKyc() {
                       <input
                         value={info.fullName}
                         onChange={(e) => updateField(s, "fullName", e.target.value)}
-                        className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+                        className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-violet-500 ${inputBg}`}
                       />
                     </div>
                     <div>
@@ -83,7 +83,7 @@ export default function AdminKyc() {
                         type="date"
                         value={info.dateOfBirth}
                         onChange={(e) => updateField(s, "dateOfBirth", e.target.value)}
-                        className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+                        className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-violet-500 ${inputBg}`}
                       />
                     </div>
                     <div>
@@ -91,7 +91,7 @@ export default function AdminKyc() {
                       <input
                         value={info.address}
                         onChange={(e) => updateField(s, "address", e.target.value)}
-                        className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+                        className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-violet-500 ${inputBg}`}
                       />
                     </div>
                     <div>
@@ -99,25 +99,25 @@ export default function AdminKyc() {
                       <input
                         value={info.country}
                         onChange={(e) => updateField(s, "country", e.target.value)}
-                        className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-teal-500 ${inputBg}`}
+                        className={`w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-violet-500 ${inputBg}`}
                       />
                     </div>
                   </div>
                   <div className="flex items-center gap-3 mt-3 text-xs">
-                    <a href={s.idProofUrl} target="_blank" rel="noreferrer" className="text-teal-400 hover:underline">
+                    <a href={s.idProofUrl} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">
                       ID Proof
                     </a>
-                    <a href={s.addressProofUrl} target="_blank" rel="noreferrer" className="text-teal-400 hover:underline">
+                    <a href={s.addressProofUrl} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">
                       Address Proof
                     </a>
-                    <a href={s.selfieUrl} target="_blank" rel="noreferrer" className="text-teal-400 hover:underline">
+                    <a href={s.selfieUrl} target="_blank" rel="noreferrer" className="text-violet-400 hover:underline">
                       Selfie
                     </a>
                     {dirty && (
                       <button
                         onClick={() => handleSave(s)}
                         disabled={savingUid === s.uid}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/15 text-teal-400 border border-teal-500/30 text-xs font-semibold disabled:opacity-60"
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-500/15 text-violet-400 border border-violet-500/30 text-xs font-semibold disabled:opacity-60"
                       >
                         <Save size={12} /> {savingUid === s.uid ? "Saving..." : "Save Changes"}
                       </button>
