@@ -105,11 +105,19 @@ export function subscribeToKline(
       );
     };
 
+    // If the socket is still mid-handshake when we're asked to close it (e.g. the
+    // symbol/interval changed or the component unmounted seconds after mount), calling
+    // close() immediately logs a benign but noisy "closed before connection established"
+    // warning. Defer to onopen instead so we only ever close an actually-open socket.
+    ws.onopen = () => {
+      if (closedByUs) ws?.close();
+    };
+
     ws.onclose = () => {
       if (!closedByUs) reconnectTimer = setTimeout(connect, 3000);
     };
     ws.onerror = () => {
-      ws?.close();
+      if (ws?.readyState === WebSocket.OPEN) ws.close();
     };
   }
 
@@ -118,6 +126,6 @@ export function subscribeToKline(
   return () => {
     closedByUs = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
-    ws?.close();
+    if (ws?.readyState === WebSocket.OPEN) ws.close();
   };
 }

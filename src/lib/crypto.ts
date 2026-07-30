@@ -99,11 +99,19 @@ export function subscribeToCryptoTicker(onUpdate: (ticks: Record<string, CryptoT
       onUpdate({ ...state });
     };
 
+    // If the socket is still mid-handshake when we're asked to close it (e.g. the
+    // component unmounted seconds after mount), calling close() immediately logs a
+    // benign but noisy "closed before connection established" warning. Defer to onopen
+    // instead so we only ever close an actually-open socket.
+    ws.onopen = () => {
+      if (closedByUs) ws?.close();
+    };
+
     ws.onclose = () => {
       if (!closedByUs) reconnectTimer = setTimeout(connect, 3000);
     };
     ws.onerror = () => {
-      ws?.close();
+      if (ws?.readyState === WebSocket.OPEN) ws.close();
     };
   }
 
@@ -112,7 +120,7 @@ export function subscribeToCryptoTicker(onUpdate: (ticks: Record<string, CryptoT
   return () => {
     closedByUs = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
-    ws?.close();
+    if (ws?.readyState === WebSocket.OPEN) ws.close();
   };
 }
 
