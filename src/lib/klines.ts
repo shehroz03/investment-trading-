@@ -65,7 +65,7 @@ export function subscribeToSimulatedKline(
 
 export async function fetchKlines(symbol: string, interval: string, limit = 200): Promise<Candle[]> {
   const res = await fetch(
-    `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
+    `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=${interval}&limit=${limit}`
   );
   const raw: unknown[][] = await res.json();
   return raw.map((k) => ({
