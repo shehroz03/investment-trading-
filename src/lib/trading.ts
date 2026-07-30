@@ -1,10 +1,9 @@
 import { supabase } from "@/lib/supabase";
 
-// Use the environment variable if available, otherwise use relative path for development
-const TRADING_API_URL =
-  import.meta.env.VITE_TRADING_API_URL && import.meta.env.PROD
-    ? import.meta.env.VITE_TRADING_API_URL
-    : "/api";
+// The api/*.js serverless functions are deployed as part of this same Vercel project,
+// so they're always reachable at a relative path on the current origin — no separate
+// API domain to configure or get out of sync with.
+const TRADING_API_URL = "/api";
 
 // Shared by every module that calls one of this project's Vercel serverless functions
 export async function callTradingApi<T>(endpoint: string, body: unknown): Promise<T> {

@@ -44,7 +44,7 @@ export default function AdminVip() {
                 <p className={`font-mono text-xs ${textMuted}`}>{s.uid}</p>
                 <p className={`text-sm mt-1 ${textPrimary}`}>{s.note || "No reason provided."}</p>
                 <p className={`text-xs mt-1 ${textMuted}`}>
-                  {s.submittedAt ? s.submittedAt.toDate().toLocaleString() : "—"}
+                  {s.submittedAt ? new Date(s.submittedAt).toLocaleString() : "—"}
                 </p>
               </div>
               <div className="flex gap-2 flex-shrink-0">

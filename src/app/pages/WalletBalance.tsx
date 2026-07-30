@@ -147,7 +147,7 @@ export default function WalletBalance() {
                       {money(Math.abs(t.amount))}
                     </td>
                     <td className={`px-5 py-3 ${textMuted}`}>{t.note}</td>
-                    <td className={`px-5 py-3 ${textMuted}`}>{t.createdAt ? t.createdAt.toDate().toLocaleString() : "—"}</td>
+                    <td className={`px-5 py-3 ${textMuted}`}>{t.createdAt ? new Date(t.createdAt).toLocaleString() : "—"}</td>
                   </tr>
                 ))
               )}

@@ -245,7 +245,7 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
     for (const pos of openPositions) {
       if (!pos.expiresAt || pos.frozen || armedRef.current.has(pos.id)) continue;
       armedRef.current.add(pos.id);
-      const msUntilExpiry = pos.expiresAt.toMillis() - Date.now();
+      const msUntilExpiry = new Date(pos.expiresAt).getTime() - Date.now();
 
       const beginSettlement = () => {
         setSettlingUntil((prev) => ({ ...prev, [pos.id]: Date.now() + SETTLEMENT_GRACE_MS }));
@@ -360,8 +360,8 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
 
   const handleSetDemo = async () => {
     const val = Number(demoInput);
-    if (isNaN(val) || val < 1 || val > 500000) {
-      setDemoError("Amount must be between $1 and $500,000.");
+    if (isNaN(val) || val < 1 || val > 5000000) {
+      setDemoError("Amount must be between $1 and $5,000,000.");
       return;
     }
     setDemoError(null);
@@ -582,7 +582,7 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
                         : (pos.entryPrice - currentPrice) / pos.entryPrice)
                     : null;
                   const positive = (livePnl ?? 0) >= 0;
-                  const remainingMs = pos.expiresAt ? pos.expiresAt.toMillis() - Date.now() : null;
+                  const remainingMs = pos.expiresAt ? new Date(pos.expiresAt).getTime() - Date.now() : null;
                   const settleAt = settlingUntil[pos.id];
 
                   return (
@@ -634,16 +634,16 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
           <div className={`w-full max-w-sm rounded-2xl border p-5 ${cardBg}`} onClick={(e) => e.stopPropagation()}>
             <h3 className={`font-semibold mb-2 ${textPrimary}`}>Set Demo Balance</h3>
             <p className={`text-xs mb-4 ${textMuted}`}>
-              Set your demo balance to practice trading. Limit is $1 to $500,000.
+              Set your demo balance to practice trading. Limit is $1 to $5,000,000.
             </p>
             <input
               type="number"
               min="1"
-              max="500000"
+              max="5000000"
               value={demoInput}
               onChange={(e) => setDemoInput(e.target.value)}
               className={`w-full px-3 py-2.5 mb-2 rounded-xl border text-sm outline-none focus:border-sky-500 ${inputBg}`}
-              placeholder="Amount (e.g. 1000)"
+              placeholder="Amount (e.g. 10000)"
             />
             {demoError && <p className="text-xs text-red-400 mb-3">{demoError}</p>}
             <div className="flex gap-2 mt-4">

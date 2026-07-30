@@ -99,7 +99,7 @@ export default function AdminTrades() {
                         )}
                       </div>
                     </td>
-                    <td className={`px-5 py-3 ${textMuted}`}>{t.openedAt ? t.openedAt.toDate().toLocaleString() : "—"}</td>
+                    <td className={`px-5 py-3 ${textMuted}`}>{t.openedAt ? new Date(t.openedAt).toLocaleString() : "—"}</td>
                     <td className="px-5 py-3">
                       {t.status !== "open" ? (
                         <span className={`text-xs ${textMuted}`}>—</span>

@@ -81,7 +81,7 @@ export function DataTables({ darkMode, transactions }: DataTablesProps) {
                     {t.amount < 0 ? "-" : ""}${Math.abs(t.amount).toFixed(2)}
                   </td>
                   <td className={`px-5 py-3 ${textMuted}`}>
-                    {t.createdAt ? t.createdAt.toDate().toLocaleDateString() : "—"}
+                    {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "—"}
                   </td>
                 </tr>
               ))

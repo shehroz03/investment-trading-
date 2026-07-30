@@ -33,7 +33,7 @@ function PnlTooltip({ active, payload, textPrimary, textMuted, cardBg, divider }
         {positive ? "+" : ""}
         {`$${pnl.toFixed(2)}`}
       </p>
-      <p className={textMuted}>{t.closedAt ? t.closedAt.toDate().toLocaleString() : "—"}</p>
+      <p className={textMuted}>{t.closedAt ? new Date(t.closedAt).toLocaleString() : "—"}</p>
       {t.adminOutcome && <p className={textMuted}>Admin-decided {t.adminOutcome}</p>}
     </div>
   );

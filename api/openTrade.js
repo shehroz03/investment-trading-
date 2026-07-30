@@ -20,7 +20,7 @@ module.exports = withHandler(async (req, body) => {
   // 1. Fetch user's wallet
   const { data: wallet, error: walletError } = await supabase
     .from("wallets")
-    .select("available, locked")
+    .select("available, locked, demo_available, demo_locked")
     .eq("user_id", uid)
     .single();
 

@@ -34,11 +34,12 @@ export default defineConfig({
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
-  // Proxy API requests to Vercel backend during development
+  // Proxy API requests to the deployed Vercel backend during development, since Vite's
+  // dev server doesn't run the api/*.js serverless functions itself.
   server: {
     proxy: {
       '/api': {
-        target: process.env.VITE_TRADING_API_URL?.replace('/api', '') || 'https://investment-trading-lilac.vercel.app',
+        target: process.env.VITE_TRADING_API_URL?.replace('/api', '') || 'https://investment-mlm-referral-dashboard.vercel.app',
         changeOrigin: true,
         rewrite: (path) => path,
       },

@@ -11,8 +11,8 @@ module.exports = withHandler(async (req, body) => {
     throw new HttpError(400, "Invalid amount.");
   }
 
-  if (amount < 1 || amount > 500000) {
-    throw new HttpError(400, "Demo balance must be between $1 and $500,000.");
+  if (amount < 1 || amount > 5000000) {
+    throw new HttpError(400, "Demo balance must be between $1 and $5,000,000.");
   }
 
   // First check if wallet exists
@@ -26,10 +26,10 @@ module.exports = withHandler(async (req, body) => {
     throw new HttpError(400, "Wallet not found. Please ensure your account is properly set up.");
   }
 
-  // Update demo balance
+  // Update demo balance and clear any locked demo balance from previous trades
   const { error: updateError } = await supabase
     .from("wallets")
-    .update({ demo_available: amount })
+    .update({ demo_available: amount, demo_locked: 0 })
     .eq("user_id", uid);
 
   if (updateError) {
