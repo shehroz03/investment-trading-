@@ -5,6 +5,7 @@ export type TransactionType =
   | "withdrawal"
   | "roi"
   | "trade_pnl"
+  | "referral_bonus"
   | "admin_credit"
   | "admin_balance_adjustment"
   | "admin_pending_order_adjustment"

@@ -54,15 +54,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [walletResolved, setWalletResolved] = useState(false);
 
   useEffect(() => {
+    // Initial session check — runs once on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setAuthResolved(true);
     });
 
+    // Only react to actual sign-in / sign-out events.
+    // TOKEN_REFRESHED fires every time the tab regains focus and would
+    // reset `authResolved` → `loading = true` → full-screen spinner flash.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        setAuthResolved(true);
+      (event, session) => {
+        if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+          setUser(session?.user ?? null);
+          setAuthResolved(true);
+        }
       }
     );
 
