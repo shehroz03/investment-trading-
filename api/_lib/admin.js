@@ -18,10 +18,15 @@ function ensureInitialized() {
   });
 }
 
-// Exporting a getter so callers always get the initialized instance
+// Exporting a getter so callers always get the initialized instance. Every api/*.js file
+// destructures `admin` at the top of the module (e.g. `const { admin } = require(...)`),
+// which reads this getter at require-time — before any request has run withHandler's
+// ensureInitialized() call. Self-initializing here (rather than throwing) means that
+// works correctly regardless of whether `admin` is accessed at module load or later
+// inside a handler.
 module.exports = {
   get admin() {
-    if (!supabaseAdmin) throw new Error("Admin not initialized. Call ensureInitialized() first.");
+    if (!supabaseAdmin) ensureInitialized();
     return supabaseAdmin;
   },
   ensureInitialized

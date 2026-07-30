@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "concurrently -n API,WEB -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:web": "vite",
+    "dev:api": "node --env-file=.env scripts/local-api-server.cjs"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -73,6 +75,7 @@
     "@tailwindcss/vite": "4.1.12",
     "@types/qrcode": "^1.5.6",
     "@vitejs/plugin-react": "4.7.0",
+    "concurrently": "^10.0.4",
     "tailwindcss": "4.1.12",
     "vite": "6.3.5"
   },

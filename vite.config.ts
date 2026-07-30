@@ -34,14 +34,14 @@ export default defineConfig({
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 
-  // Proxy API requests to the deployed Vercel backend during development, since Vite's
-  // dev server doesn't run the api/*.js serverless functions itself.
+  // Proxy API requests to the local api/*.js server (see scripts/local-api-server.cjs,
+  // started alongside this dev server by `npm run dev`) so local development doesn't
+  // depend on any deployed Vercel project or its environment variables.
   server: {
     proxy: {
       '/api': {
-        target: process.env.VITE_TRADING_API_URL?.replace('/api', '') || 'https://investment-mlm-referral-dashboard.vercel.app',
+        target: `http://localhost:${process.env.LOCAL_API_PORT || 3001}`,
         changeOrigin: true,
-        rewrite: (path) => path,
       },
     },
   },

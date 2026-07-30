@@ -63,10 +63,14 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
   const priceOverrideRef = useRef<{ tradeId: string; symbol: string; targetPrice: number } | null>(null);
   const overrideAnimatedRef = useRef<Set<string>>(new Set());
 
-  const [symbol, setSymbol] = useState(initialSymbol);
-  
+  // Dashboard ticker links and Binance stream URLs use lowercase symbols (e.g.
+  // /trade/btcusdt), but the trading API and the coin dropdown's <option> values are
+  // uppercase — normalize once here so both always agree regardless of how the symbol
+  // was set (URL param, dropdown, coin picker).
+  const [symbol, setSymbol] = useState(initialSymbol.toUpperCase());
+
   useEffect(() => {
-    setSymbol(initialSymbol);
+    setSymbol(initialSymbol.toUpperCase());
   }, [initialSymbol]);
   const [interval, setInterval_] = useState("1m");
   const [amount, setAmount] = useState("");
