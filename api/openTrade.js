@@ -6,7 +6,7 @@ module.exports = withHandler(async (req, body) => {
   const uid = await requireUid(req);
   const supabase = admin; // Using the exported Supabase Admin client
 
-  const { symbol, direction, amount, durationSeconds } = body;
+  const { symbol, direction, amount, durationSeconds, stopLoss, takeProfit } = body;
   if (!isValidSymbol(symbol)) throw new HttpError(400, "Unsupported symbol.");
   if (direction !== "long" && direction !== "short") throw new HttpError(400, "Invalid direction.");
   if (typeof amount !== "number" || !(amount > 0)) throw new HttpError(400, "Invalid amount.");
@@ -14,8 +14,27 @@ module.exports = withHandler(async (req, body) => {
     throw new HttpError(400, "Unsupported duration.");
   }
 
+  function isValidLevel(v) {
+    return v === undefined || v === null || (typeof v === "number" && Number.isFinite(v) && v > 0);
+  }
+  if (!isValidLevel(stopLoss)) throw new HttpError(400, "Invalid stop loss.");
+  if (!isValidLevel(takeProfit)) throw new HttpError(400, "Invalid take profit.");
+
   const entryPrice = await fetchPrice(symbol);
   const expiresAt = durationSeconds ? new Date(Date.now() + durationSeconds * 1000).toISOString() : null;
+
+  // Direction-sanity check against the real, just-fetched entry price — catches a SL/TP
+  // set on the wrong side of entry (client bug, or a stale price the client validated
+  // against before this request landed).
+  if (stopLoss != null || takeProfit != null) {
+    if (direction === "long") {
+      if (stopLoss != null && !(stopLoss < entryPrice)) throw new HttpError(400, "Stop loss must be below the entry price for a long position.");
+      if (takeProfit != null && !(takeProfit > entryPrice)) throw new HttpError(400, "Take profit must be above the entry price for a long position.");
+    } else {
+      if (stopLoss != null && !(stopLoss > entryPrice)) throw new HttpError(400, "Stop loss must be above the entry price for a short position.");
+      if (takeProfit != null && !(takeProfit < entryPrice)) throw new HttpError(400, "Take profit must be below the entry price for a short position.");
+    }
+  }
 
   // 1. Fetch user's wallet
   const { data: wallet, error: walletError } = await supabase
@@ -68,7 +87,9 @@ module.exports = withHandler(async (req, body) => {
       "durationSeconds": durationSeconds ?? null,
       "expiresAt": expiresAt,
       "openedAt": new Date().toISOString(),
-      is_demo: isDemo
+      is_demo: isDemo,
+      "stopLoss": stopLoss ?? null,
+      "takeProfit": takeProfit ?? null
     })
     .select()
     .single();

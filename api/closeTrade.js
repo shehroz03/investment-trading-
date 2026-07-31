@@ -6,7 +6,8 @@ module.exports = withHandler(async (req, body) => {
   const uid = await requireUid(req);
   const supabase = admin; // Using the exported Supabase Admin client
 
-  const { tradeId } = body;
+  const ALLOWED_CLOSE_REASONS = new Set(["manual", "duration", "stop_loss", "take_profit"]);
+  const { tradeId, reason } = body;
   if (typeof tradeId !== "string" || !tradeId) throw new HttpError(400, "Invalid trade id.");
 
   // 1. Fetch trade
@@ -104,7 +105,8 @@ module.exports = withHandler(async (req, body) => {
       status: "closed",
       "closePrice": closePrice,
       pnl: pnl,
-      "closedAt": new Date().toISOString()
+      "closedAt": new Date().toISOString(),
+      "closeReason": ALLOWED_CLOSE_REASONS.has(reason) ? reason : "manual"
     })
     .eq("id", tradeId);
 

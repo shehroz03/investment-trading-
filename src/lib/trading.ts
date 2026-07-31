@@ -46,6 +46,7 @@ export const TRADE_DURATIONS = [10, 20, 30, 60, 120, 300] as const;
 export type TradeDuration = (typeof TRADE_DURATIONS)[number];
 
 export type TradeOutcome = "win" | "loss";
+export type TradeCloseReason = "manual" | "duration" | "stop_loss" | "take_profit";
 
 export interface Trade {
   id: string;
@@ -68,6 +69,9 @@ export interface Trade {
   frozenBy?: string;
   frozenAt?: string | null;
   is_demo?: boolean;
+  stopLoss?: number | null;
+  takeProfit?: number | null;
+  closeReason?: TradeCloseReason | null;
 }
 
 export async function openTrade(
@@ -75,7 +79,9 @@ export async function openTrade(
   direction: TradeDirection,
   amount: number,
   durationSeconds?: TradeDuration,
-  isDemo?: boolean
+  isDemo?: boolean,
+  stopLoss?: number,
+  takeProfit?: number
 ) {
   return callTradingApi<{ tradeId: string; entryPrice: number }>("openTrade", {
     symbol,
@@ -83,6 +89,8 @@ export async function openTrade(
     amount,
     durationSeconds,
     is_demo: isDemo,
+    stopLoss: stopLoss ?? null,
+    takeProfit: takeProfit ?? null,
   });
 }
 
@@ -90,8 +98,12 @@ export async function setDemoBalance(amount: number) {
   return callTradingApi<{ success: boolean; demo_available: number }>("setDemoBalance", { amount });
 }
 
-export async function closeTrade(tradeId: string) {
-  return callTradingApi<{ closePrice: number; pnl: number }>("closeTrade", { tradeId });
+export async function closeTrade(tradeId: string, reason?: TradeCloseReason) {
+  return callTradingApi<{ closePrice: number; pnl: number }>("closeTrade", { tradeId, reason });
+}
+
+export async function updateTradeSlTp(tradeId: string, stopLoss: number | null, takeProfit: number | null) {
+  return callTradingApi<{ ok: boolean }>("updateTradeSlTp", { tradeId, stopLoss, takeProfit });
 }
 
 export async function setTradeOutcome(tradeId: string, outcome: TradeOutcome) {

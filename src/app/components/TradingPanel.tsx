@@ -1,6 +1,17 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { createChart, CandlestickSeries, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { TrendingUp, TrendingDown, Timer, AlertTriangle, Lock, Edit2, Loader2 } from "lucide-react";
+import {
+  createChart,
+  CandlestickSeries,
+  LineStyle,
+  createSeriesMarkers,
+  type IChartApi,
+  type ISeriesApi,
+  type ISeriesMarkersPluginApi,
+  type IPriceLine,
+  type SeriesMarker,
+  type Time,
+} from "lightweight-charts";
+import { TrendingUp, TrendingDown, Timer, AlertTriangle, Lock, Edit2, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useThemeClasses } from "@/app/components/Panel";
 import {
@@ -20,7 +31,17 @@ import {
   isSimulatedSymbol,
   INTERVAL_SECONDS,
 } from "@/lib/klines";
-import { openTrade, closeTrade, subscribeToOpenTrades, setDemoBalance, TRADE_DURATIONS, type Trade, type TradeDuration } from "@/lib/trading";
+import {
+  openTrade,
+  closeTrade,
+  updateTradeSlTp,
+  subscribeToOpenTrades,
+  setDemoBalance,
+  TRADE_DURATIONS,
+  type Trade,
+  type TradeDuration,
+  type TradeCloseReason,
+} from "@/lib/trading";
 import { AllCoinsModal } from "@/app/components/AllCoinsModal";
 import { TradingRulesModal } from "@/app/components/TradingRulesModal";
 
@@ -49,6 +70,20 @@ function formatRemaining(ms: number) {
   return `${minutes}m ${seconds}s`;
 }
 
+// Mirrors the direction-sanity check api/openTrade.js and api/updateTradeSlTp.js run
+// server-side — this is just an early, friendlier rejection so the user doesn't have to
+// round-trip to the server to find out their SL/TP is on the wrong side of the price.
+function validateSlTp(direction: "long" | "short", referencePrice: number, sl: number | null, tp: number | null): string | null {
+  if (direction === "long") {
+    if (sl !== null && sl >= referencePrice) return "Stop loss must be below the current price for a Long.";
+    if (tp !== null && tp <= referencePrice) return "Take profit must be above the current price for a Long.";
+  } else {
+    if (sl !== null && sl <= referencePrice) return "Stop loss must be above the current price for a Short.";
+    if (tp !== null && tp >= referencePrice) return "Take profit must be below the current price for a Short.";
+  }
+  return null;
+}
+
 export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { initialSymbol?: string, onSymbolChange?: (sym: string) => void }) {
   const { user, wallet, isDemo, setIsDemo } = useAuth();
   const { textPrimary, textMuted, cardBg, inputBg, divider, hoverBg, darkMode } = useThemeClasses();
@@ -62,6 +97,16 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
   // there until the trade closes. Simulated instruments only — never real market symbols.
   const priceOverrideRef = useRef<{ tradeId: string; symbol: string; targetPrice: number } | null>(null);
   const overrideAnimatedRef = useRef<Set<string>>(new Set());
+  // Arm-once guard for SL/TP auto-close, mirroring armedRef's role for duration auto-close —
+  // without it, a single price crossing could fire handleClose multiple times while the
+  // close request is still in flight (ticks update far more often than once).
+  const slTpArmedRef = useRef<Set<string>>(new Set());
+  const priceLinesRef = useRef<IPriceLine[]>([]);
+  const seriesMarkersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+  // Rolling, capped history of recent exit points (per symbol) so the chart can show where a
+  // trade closed even though it's no longer in openPositions — not fetched from the DB, just
+  // appended live as trades close during this session.
+  const exitMarkersRef = useRef<SeriesMarker<Time>[]>([]);
 
   // Dashboard ticker links and Binance stream URLs use lowercase symbols (e.g.
   // /trade/btcusdt), but the trading API and the coin dropdown's <option> values are
@@ -75,6 +120,9 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
   const [interval, setInterval_] = useState("1m");
   const [amount, setAmount] = useState("");
   const [duration, setDuration] = useState<TradeDuration | null>(null);
+  const [stopLoss, setStopLoss] = useState("");
+  const [takeProfit, setTakeProfit] = useState("");
+  const [showSlTp, setShowSlTp] = useState(false);
   const [submitting, setSubmitting] = useState<"long" | "short" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openPositions, setOpenPositions] = useState<Trade[]>([]);
@@ -95,6 +143,13 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
   const [demoInput, setDemoInput] = useState("1000");
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
+
+  // Edit Stop Loss / Take Profit on an already-open position
+  const [editingSlTp, setEditingSlTp] = useState<Trade | null>(null);
+  const [editSl, setEditSl] = useState("");
+  const [editTp, setEditTp] = useState("");
+  const [editSlTpError, setEditSlTpError] = useState<string | null>(null);
+  const [editSlTpSaving, setEditSlTpSaving] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -123,6 +178,7 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
 
     chartRef.current = chart;
     seriesRef.current = series;
+    seriesMarkersRef.current = createSeriesMarkers(series, []);
 
     const handleResize = () => {
       if (containerRef.current) chart.applyOptions({ width: containerRef.current.clientWidth });
@@ -134,6 +190,7 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      seriesMarkersRef.current = null;
     };
   }, [darkMode]);
 
@@ -159,6 +216,87 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
       unsubscribe();
     };
   }, [symbol, interval]);
+
+  // Draws entry/SL/TP price lines for the currently selected symbol's open position(s) only —
+  // lightweight-charts price lines are per-series, so a position on a different symbol than
+  // the one currently shown isn't drawn here even though it's still open. Every line created
+  // is tracked in priceLinesRef and removed before redrawing, so switching symbols or
+  // positions opening/closing never leaks IPriceLine instances.
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+
+    for (const line of priceLinesRef.current) series.removePriceLine(line);
+    priceLinesRef.current = [];
+
+    const positionsForSymbol = openPositions.filter((p) => p.symbol === symbol);
+    for (const pos of positionsForSymbol) {
+      const directionColor = pos.direction === "long" ? "#22C55E" : "#EF4444";
+      priceLinesRef.current.push(
+        series.createPriceLine({
+          price: pos.entryPrice,
+          color: directionColor,
+          lineWidth: 2,
+          lineStyle: LineStyle.Solid,
+          axisLabelVisible: true,
+          title: `Entry ${pos.direction === "long" ? "Long" : "Short"} $${pos.amount}`,
+        })
+      );
+      if (pos.stopLoss != null) {
+        priceLinesRef.current.push(
+          series.createPriceLine({
+            price: pos.stopLoss,
+            color: "#EF4444",
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: "SL",
+          })
+        );
+      }
+      if (pos.takeProfit != null) {
+        priceLinesRef.current.push(
+          series.createPriceLine({
+            price: pos.takeProfit,
+            color: "#22C55E",
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: "TP",
+          })
+        );
+      }
+    }
+
+    return () => {
+      for (const line of priceLinesRef.current) series.removePriceLine(line);
+      priceLinesRef.current = [];
+    };
+  }, [openPositions, symbol]);
+
+  // Chart markers: an entry arrow for every currently open position on this symbol, plus a
+  // rolling (capped) history of recent exit points appended live in handleClose below — no
+  // extra DB fetch just to draw chart history.
+  useEffect(() => {
+    const markersApi = seriesMarkersRef.current;
+    if (!markersApi) return;
+
+    const stepSec = INTERVAL_SECONDS[interval] ?? 60;
+    const toBarTime = (iso: string) => (Math.floor(new Date(iso).getTime() / (stepSec * 1000)) * stepSec) as Time;
+
+    const entryMarkers: SeriesMarker<Time>[] = openPositions
+      .filter((p) => p.symbol === symbol && p.openedAt)
+      .map((p) => ({
+        time: toBarTime(p.openedAt as string),
+        position: p.direction === "long" ? "belowBar" : "aboveBar",
+        shape: p.direction === "long" ? "arrowUp" : "arrowDown",
+        color: p.direction === "long" ? "#22C55E" : "#EF4444",
+        text: "Entry",
+      }));
+
+    const relevantExitMarkers = exitMarkersRef.current.filter((m) => m.id?.startsWith(`${symbol}:`));
+    markersApi.setMarkers([...entryMarkers, ...relevantExitMarkers]);
+  }, [openPositions, symbol, interval]);
 
   useEffect(() => {
     const unsubscribe = subscribeToCryptoTicker((next) => setTicks((prev) => ({ ...prev, ...next })));
@@ -218,14 +356,29 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
     return unsubscribe;
   }, [user]);
 
-  const handleClose = async (tradeId: string) => {
+  const handleClose = async (tradeId: string, reason?: TradeCloseReason) => {
     setClosingId(tradeId);
     const closedPosition = openPositions.find((p) => p.id === tradeId);
     try {
-      const { pnl } = await closeTrade(tradeId);
+      const { pnl } = await closeTrade(tradeId, reason);
       // Shows the trade's real, already-computed P&L — nothing fabricated or animated here,
       // just surfacing the actual result once the position settles.
-      if (closedPosition) setTradeResult({ trade: closedPosition, pnl });
+      if (closedPosition) {
+        const stepSec = INTERVAL_SECONDS[interval] ?? 60;
+        const barTime = (Math.floor(Date.now() / (stepSec * 1000)) * stepSec) as Time;
+        exitMarkersRef.current = [
+          ...exitMarkersRef.current.slice(-19), // cap rolling history
+          {
+            id: `${closedPosition.symbol}:${tradeId}`,
+            time: barTime,
+            position: "inBar",
+            shape: "circle",
+            color: pnl >= 0 ? "#22C55E" : "#EF4444",
+            text: pnl >= 0 ? "Win" : "Loss",
+          },
+        ];
+        setTradeResult({ trade: closedPosition, pnl });
+      }
     } catch (err) {
       // Most commonly hit if an admin froze this trade between it being loaded and the
       // auto-close timer firing — the live subscription already reflects that either way.
@@ -253,7 +406,7 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
 
       const beginSettlement = () => {
         setSettlingUntil((prev) => ({ ...prev, [pos.id]: Date.now() + SETTLEMENT_GRACE_MS }));
-        setTimeout(() => handleClose(pos.id), SETTLEMENT_GRACE_MS);
+        setTimeout(() => handleClose(pos.id, "duration"), SETTLEMENT_GRACE_MS);
       };
 
       if (msUntilExpiry <= 0) beginSettlement();
@@ -261,6 +414,33 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openPositions]);
+
+  // Mirrors the arm-once pattern used for duration auto-close above (armedRef), but watches
+  // live price crossing an SL/TP level instead of a fixed timer — must recheck on every
+  // `ticks` update since a cross can happen at any time, not on a schedule. slTpArmedRef
+  // prevents a single crossing from firing handleClose more than once while the close
+  // request is in flight.
+  useEffect(() => {
+    for (const pos of openPositions) {
+      if (pos.frozen || slTpArmedRef.current.has(pos.id)) continue;
+      if (pos.stopLoss == null && pos.takeProfit == null) continue;
+      const currentPrice = ticks[pos.symbol.toLowerCase()]?.price;
+      if (currentPrice === undefined) continue;
+
+      const hitStopLoss =
+        pos.stopLoss != null &&
+        (pos.direction === "long" ? currentPrice <= pos.stopLoss : currentPrice >= pos.stopLoss);
+      const hitTakeProfit =
+        pos.takeProfit != null &&
+        (pos.direction === "long" ? currentPrice >= pos.takeProfit : currentPrice <= pos.takeProfit);
+
+      if (hitStopLoss || hitTakeProfit) {
+        slTpArmedRef.current.add(pos.id);
+        handleClose(pos.id, hitStopLoss ? "stop_loss" : "take_profit");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticks, openPositions]);
 
   // When an admin sets win/loss on an open BTS/ETC position, the chart for that symbol
   // animates from its current price to a target consistent with the payout tiers (30%/40%,
@@ -334,6 +514,16 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
       setError(`Amount exceeds your ${isDemo ? 'demo' : 'available'} balance.`);
       return;
     }
+    const referencePrice = ticks[symbol.toLowerCase()]?.price;
+    const sl = stopLoss.trim() ? Number(stopLoss) : null;
+    const tp = takeProfit.trim() ? Number(takeProfit) : null;
+    if (referencePrice != null) {
+      const slTpError = validateSlTp(direction, referencePrice, sl, tp);
+      if (slTpError) {
+        setError(slTpError);
+        return;
+      }
+    }
     setError(null);
     setRulesModal(direction);
   };
@@ -350,15 +540,48 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
       setError(`Amount exceeds your ${isDemo ? 'demo' : 'available'} balance.`);
       return;
     }
+    const sl = stopLoss.trim() ? Number(stopLoss) : null;
+    const tp = takeProfit.trim() ? Number(takeProfit) : null;
+    const referencePrice = ticks[symbol.toLowerCase()]?.price;
+    if (referencePrice != null) {
+      const slTpError = validateSlTp(direction, referencePrice, sl, tp);
+      if (slTpError) {
+        setError(slTpError);
+        return;
+      }
+    }
     setError(null);
     setSubmitting(direction);
     try {
-      await openTrade(symbol, direction, numericAmount, duration ?? undefined, isDemo);
+      await openTrade(symbol, direction, numericAmount, duration ?? undefined, isDemo, sl ?? undefined, tp ?? undefined);
       setAmount("");
+      setStopLoss("");
+      setTakeProfit("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open trade.");
     } finally {
       setSubmitting(null);
+    }
+  };
+
+  const handleSaveSlTp = async () => {
+    if (!editingSlTp) return;
+    const sl = editSl.trim() ? Number(editSl) : null;
+    const tp = editTp.trim() ? Number(editTp) : null;
+    const slTpError = validateSlTp(editingSlTp.direction, editingSlTp.entryPrice, sl, tp);
+    if (slTpError) {
+      setEditSlTpError(slTpError);
+      return;
+    }
+    setEditSlTpError(null);
+    setEditSlTpSaving(true);
+    try {
+      await updateTradeSlTp(editingSlTp.id, sl, tp);
+      setEditingSlTp(null);
+    } catch (err) {
+      setEditSlTpError(err instanceof Error ? err.message : "Failed to update stop loss / take profit.");
+    } finally {
+      setEditSlTpSaving(false);
     }
   };
 
@@ -379,6 +602,11 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
       setDemoLoading(false);
     }
   };
+
+  const SPREAD_PERCENT = 0.0006; // 0.06% cosmetic display spread — not used for actual fills
+  const midPrice = ticks[symbol.toLowerCase()]?.price;
+  const bidPrice = midPrice != null ? midPrice * (1 - SPREAD_PERCENT / 2) : null;
+  const askPrice = midPrice != null ? midPrice * (1 + SPREAD_PERCENT / 2) : null;
 
   return (
     <div className={`rounded-xl border p-4 ${cardBg}`}>
@@ -516,6 +744,15 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
                 {isDemo ? "Switch to Real" : "Switch to Demo"}
               </button>
             </div>
+            {/* Cosmetic display spread — purely visual. The actual fill price used by
+                openTrade/closeTrade stays the single server-fetched price exactly as
+                before; bid/ask never feeds into the trade execution path. */}
+            {midPrice != null && (
+              <div className="flex items-center justify-between text-[11px] mb-1.5">
+                <span className="text-red-400">Bid {bidPrice!.toFixed(2)}</span>
+                <span className="text-green-400">Ask {askPrice!.toFixed(2)}</span>
+              </div>
+            )}
             <input
               type="number"
               min="1"
@@ -549,6 +786,43 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
                 Position auto-closes {DURATION_OPTIONS.find((o) => o.value === duration)?.label} after opening, then
                 settles within {SETTLEMENT_GRACE_MS / 1000}s.
               </p>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowSlTp((v) => !v)}
+              className={`w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wider ${textMuted}`}
+            >
+              <span>Stop Loss / Take Profit</span>
+              {showSlTp ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            {showSlTp && (
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <label className={`text-[10px] ${textMuted}`}>Stop Loss</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Optional"
+                    value={stopLoss}
+                    onChange={(e) => setStopLoss(e.target.value)}
+                    className={`w-full px-2.5 py-2 rounded-lg border text-xs outline-none focus:border-red-500 ${inputBg}`}
+                  />
+                </div>
+                <div>
+                  <label className={`text-[10px] ${textMuted}`}>Take Profit</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Optional"
+                    value={takeProfit}
+                    onChange={(e) => setTakeProfit(e.target.value)}
+                    className={`w-full px-2.5 py-2 rounded-lg border text-xs outline-none focus:border-green-500 ${inputBg}`}
+                  />
+                </div>
+              </div>
             )}
           </div>
 
@@ -599,31 +873,53 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
                         <p className={`text-xs ${livePnl === null ? textMuted : positive ? "text-green-400" : "text-red-400"}`}>
                           {livePnl === null ? "—" : `${positive ? "+" : ""}$${livePnl.toFixed(2)}`}
                         </p>
+                        {(pos.stopLoss != null || pos.takeProfit != null) && (
+                          <p className="text-[10px] mt-0.5 flex gap-2">
+                            {pos.stopLoss != null && <span className="text-red-400">SL ${pos.stopLoss}</span>}
+                            {pos.takeProfit != null && <span className="text-green-400">TP ${pos.takeProfit}</span>}
+                          </p>
+                        )}
                       </div>
-                      {pos.frozen ? (
-                        <span className="flex items-center gap-1 text-xs font-semibold text-sky-400" title="An admin has frozen this trade — it can't be closed until unfrozen.">
-                          <Lock size={12} />
-                          Frozen
-                        </span>
-                      ) : settleAt !== undefined ? (
-                        <span className="flex items-center gap-1 text-xs font-semibold text-amber-400">
-                          <Timer size={12} className="animate-pulse" />
-                          Settling... {formatRemaining(settleAt - Date.now())}
-                        </span>
-                      ) : remainingMs !== null ? (
-                        <span className="flex items-center gap-1 text-xs font-semibold text-amber-400">
-                          <Timer size={12} />
-                          {formatRemaining(remainingMs)}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleClose(pos.id)}
-                          disabled={closingId === pos.id}
-                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-60 ${hoverBg} ${textPrimary}`}
-                        >
-                          {closingId === pos.id ? "..." : "Close"}
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {!pos.frozen && (
+                          <button
+                            onClick={() => {
+                              setEditingSlTp(pos);
+                              setEditSl(pos.stopLoss?.toString() ?? "");
+                              setEditTp(pos.takeProfit?.toString() ?? "");
+                              setEditSlTpError(null);
+                            }}
+                            title="Edit Stop Loss / Take Profit"
+                            className="p-1 rounded-md hover:bg-violet-500/10 text-violet-400"
+                          >
+                            <Edit2 size={11} />
+                          </button>
+                        )}
+                        {pos.frozen ? (
+                          <span className="flex items-center gap-1 text-xs font-semibold text-sky-400" title="An admin has frozen this trade — it can't be closed until unfrozen.">
+                            <Lock size={12} />
+                            Frozen
+                          </span>
+                        ) : settleAt !== undefined ? (
+                          <span className="flex items-center gap-1 text-xs font-semibold text-amber-400">
+                            <Timer size={12} className="animate-pulse" />
+                            Settling... {formatRemaining(settleAt - Date.now())}
+                          </span>
+                        ) : remainingMs !== null ? (
+                          <span className="flex items-center gap-1 text-xs font-semibold text-amber-400">
+                            <Timer size={12} />
+                            {formatRemaining(remainingMs)}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleClose(pos.id)}
+                            disabled={closingId === pos.id}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-60 ${hoverBg} ${textPrimary}`}
+                          >
+                            {closingId === pos.id ? "..." : "Close"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -663,6 +959,57 @@ export function TradingPanel({ initialSymbol = "BTCUSDT", onSymbolChange }: { in
                 className="flex-1 py-2.5 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
               >
                 {demoLoading ? <Loader2 size={16} className="animate-spin" /> : "Set Balance"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingSlTp && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60" onClick={() => setEditingSlTp(null)}>
+          <div className={`w-full max-w-sm rounded-2xl border p-5 ${cardBg}`} onClick={(e) => e.stopPropagation()}>
+            <h3 className={`font-semibold mb-2 ${textPrimary}`}>Edit Stop Loss / Take Profit</h3>
+            <p className={`text-xs mb-4 ${textMuted}`}>
+              {editingSlTp.direction === "long" ? "Long" : "Short"} {editingSlTp.symbol.replace("USDT", "")} — Entry ${editingSlTp.entryPrice}
+            </p>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div>
+                <label className={`text-[10px] ${textMuted}`}>Stop Loss</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="None"
+                  value={editSl}
+                  onChange={(e) => setEditSl(e.target.value)}
+                  className={`w-full px-2.5 py-2 rounded-lg border text-xs outline-none focus:border-red-500 ${inputBg}`}
+                />
+              </div>
+              <div>
+                <label className={`text-[10px] ${textMuted}`}>Take Profit</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="None"
+                  value={editTp}
+                  onChange={(e) => setEditTp(e.target.value)}
+                  className={`w-full px-2.5 py-2 rounded-lg border text-xs outline-none focus:border-green-500 ${inputBg}`}
+                />
+              </div>
+            </div>
+            {editSlTpError && <p className="text-xs text-red-400 mb-3">{editSlTpError}</p>}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setEditingSlTp(null)}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${hoverBg} ${textPrimary}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSlTp}
+                disabled={editSlTpSaving}
+                className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-60"
+              >
+                {editSlTpSaving ? <Loader2 size={16} className="animate-spin" /> : "Save"}
               </button>
             </div>
           </div>
